@@ -4,6 +4,7 @@ import { Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { CITY_HUBS, useGameStore } from '../../store/gameStore';
 import { HEBREW_FONT } from '../../fonts';
+import { Landmark, LANDMARK_SIGN_HEIGHT } from './Landmarks';
 
 export const CityHubs: React.FC = () => {
   const nearbyHub = useGameStore((s) => s.nearbyHub);
@@ -25,36 +26,20 @@ export const CityHubs: React.FC = () => {
       {CITY_HUBS.map((hub, index) => {
         const isNear = nearbyHub === hub.id;
         const [bx, , bz] = hub.position;
-        const [bw, bh, bd] = hub.size;
         const [ex, , ez] = hub.entryPos;
 
         return (
           <group key={hub.id}>
-            {/* Regional Landmark Building */}
+            {/* City landmarks (clicking opens the city) */}
             <group
-              position={[bx, bh / 2, bz]}
+              position={[bx, 0, bz]}
               onClick={(e) => {
                 e.stopPropagation();
                 setOpenHub(hub.id);
               }}
             >
-              <mesh castShadow receiveShadow>
-                <boxGeometry args={[bw, bh, bd]} />
-                <meshStandardMaterial
-                  color={hub.id === 'jerusalem' ? '#e7e5e4' : hub.color}
-                  roughness={0.38}
-                  metalness={0.22}
-                />
-              </mesh>
-
-              {/* Architectural Crown */}
-              <mesh position={[0, bh / 2 + 1.0, 0]} castShadow>
-                <boxGeometry args={[bw * 0.78, 2.0, bd * 0.78]} />
-                <meshStandardMaterial color={hub.color} metalness={0.4} roughness={0.25} />
-              </mesh>
-
-              {/* Floating City & Hub Sign */}
-              <Billboard position={[0, bh / 2 + 4.4, 0]}>
+              <Landmark id={hub.id} />
+              <Billboard position={[0, LANDMARK_SIGN_HEIGHT[hub.id], 0]}>
                 <Text
                   font={HEBREW_FONT}
                   direction="rtl"

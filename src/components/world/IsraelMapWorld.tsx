@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { HEBREW_FONT } from '../../fonts';
 import { Text, Billboard } from '@react-three/drei';
+import { Scenery } from './Landmarks';
 
 export const IsraelMapWorld: React.FC = () => {
   const highwayDashes = useMemo(() => {
@@ -98,17 +99,7 @@ export const IsraelMapWorld: React.FC = () => {
           <meshStandardMaterial color="#a8a29e" roughness={0.85} />
         </mesh>
       ))}
-      {/* Tel Aviv Azrieli-inspired Skyline Accent Towers */}
-      <group position={[-19, 0, -14]}>
-        <mesh position={[0, 7, 0]} castShadow>
-          <cylinderGeometry args={[1.6, 1.6, 14, 20]} />
-          <meshStandardMaterial color="#1e293b" metalness={0.5} roughness={0.2} />
-        </mesh>
-        <mesh position={[3.8, 6, 1.5]} castShadow>
-          <boxGeometry args={[2.8, 12, 2.8]} />
-          <meshStandardMaterial color="#334155" metalness={0.5} roughness={0.2} />
-        </mesh>
-      </group>
+      <Scenery />
 
       {/* REGION 3: BE'ER SHEVA & THE NEGEV DESERT (South - Golden Sandstone) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4, -0.04, 32]} receiveShadow>
