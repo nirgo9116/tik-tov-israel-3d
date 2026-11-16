@@ -83,7 +83,7 @@ export const Railway: React.FC = () => {
               </mesh>
             ))}
             {!jobOn && (
-              <NearSign min={5} max={22}>
+              <NearSign min={10} max={24}>
                 <Billboard position={[0, 3.1, 0]}>
                   <Text font={HEBREW_FONT} direction="rtl" fontSize={0.42} color="#f8fafc" outlineWidth={0.05} outlineColor="#0f172a">
                     {`תחנת רכבת ${hub.hebrewName}`}

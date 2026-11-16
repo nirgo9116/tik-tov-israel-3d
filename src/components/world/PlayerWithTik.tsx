@@ -15,16 +15,6 @@ function clampWorld(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
 }
 
-function collidesWithHub(x: number, z: number, radius = 1.1): boolean {
-  for (const hub of CITY_HUBS) {
-    const [bx, , bz] = hub.position;
-    const [bw, , bd] = hub.size;
-    if (Math.abs(x - bx) < bw / 2 + radius && Math.abs(z - bz) < bd / 2 + radius) {
-      return true;
-    }
-  }
-  return false;
-}
 
 interface TikMeshProps {
   rubricTotal: number;
@@ -194,7 +184,7 @@ export const PlayerWithTik: React.FC = () => {
           : clampWorld(nz + Math.cos(nextRot) * forward * walkSpeed * dt, -42, 42);
         const blocked = interior
           ? INTERIORS[interior].blockers.some(([bx, bz, bw, bd]) => Math.abs(candX - bx) < bw / 2 + 0.45 && Math.abs(candZ - bz) < bd / 2 + 0.45)
-          : collidesWithHub(candX, candZ, 0.85);
+          : false; // buildings are open: the player can walk inside them
         if (!blocked) {
           nx = candX;
           nz = candZ;

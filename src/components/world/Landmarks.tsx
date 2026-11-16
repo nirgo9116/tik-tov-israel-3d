@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import * as THREE from 'three';
 import { FacadeKind, facadeTexture, repeated } from './textures';
 import { CityHubId } from '../../types/game';
@@ -10,6 +10,81 @@ import { CityHubId } from '../../types/game';
  */
 
 type V3 = [number, number, number];
+
+/** What is inside a building when it is revealed: offices or homes. */
+export type InteriorKind = 'office' | 'home';
+/** True while the player is close: buildings show their floors, furniture and people. */
+export const RevealCtx = createContext<{ on: boolean; kind: InteriorKind }>({ on: false, kind: 'office' });
+
+const PEOPLE = ['#ef4444', '#3b82f6', '#a855f7', '#f59e0b', '#14b8a6'];
+
+/** Floors with furniture and small people, seen through the faded facade. */
+const BuildingInside: React.FC<{ w: number; d: number; h: number; curved: boolean; kind: InteriorKind }> = ({ w, d, h, curved, kind }) => {
+  const floorH = 2.2;
+  const floors = Math.max(1, Math.floor(h / floorH));
+  const inner = Math.min(w, d) * (curved ? 0.62 : 0.8);
+  return (
+    <group userData={{ inside: true }}>
+      {Array.from({ length: floors }, (_, i) => {
+        const y = i * floorH + 0.05;
+        const p = PEOPLE[i % PEOPLE.length];
+        return (
+          <group key={i} position={[0, y, 0]}>
+            <mesh>
+              {curved ? <cylinderGeometry args={[w / 2 - 0.12, w / 2 - 0.12, 0.1, 20]} /> : <boxGeometry args={[w - 0.2, 0.1, d - 0.2]} />}
+              <meshStandardMaterial color={kind === 'office' ? '#cbd5e1' : '#d6b88f'} />
+            </mesh>
+            {/* Ceiling light */}
+            <mesh position={[0, floorH - 0.12, 0]}>
+              <boxGeometry args={[inner * 0.6, 0.04, 0.2]} />
+              <meshStandardMaterial color="#fffbe6" emissive="#fffbe6" emissiveIntensity={1.2} />
+            </mesh>
+            {kind === 'office' ? (
+              <>
+                {/* Desks with screens */}
+                {[-1, 1].map((sx) => (
+                  <group key={sx} position={[(sx * inner) / 4, 0, 0]}>
+                    <mesh position={[0, 0.4, 0]}>
+                      <boxGeometry args={[inner / 3, 0.08, 0.5]} />
+                      <meshStandardMaterial color="#78716c" />
+                    </mesh>
+                    <mesh position={[0, 0.65, -0.12]}>
+                      <boxGeometry args={[0.35, 0.25, 0.03]} />
+                      <meshStandardMaterial color="#0f172a" emissive={i % 2 ? '#22c55e' : '#38bdf8'} emissiveIntensity={0.8} />
+                    </mesh>
+                  </group>
+                ))}
+              </>
+            ) : (
+              <>
+                {/* Sofa and table */}
+                <mesh position={[-inner / 4, 0.25, 0]}>
+                  <boxGeometry args={[inner / 3, 0.4, 0.4]} />
+                  <meshStandardMaterial color={i % 2 ? '#64748b' : '#9a3412'} />
+                </mesh>
+                <mesh position={[inner / 4, 0.35, 0]}>
+                  <boxGeometry args={[0.5, 0.06, 0.5]} />
+                  <meshStandardMaterial color="#a16207" />
+                </mesh>
+              </>
+            )}
+            {/* A person on this floor */}
+            <group position={[(i % 2 ? -1 : 1) * inner * 0.12, 0, 0.25]}>
+              <mesh position={[0, 0.35, 0]}>
+                <cylinderGeometry args={[0.1, 0.12, 0.7, 8]} />
+                <meshStandardMaterial color={p} />
+              </mesh>
+              <mesh position={[0, 0.8, 0]}>
+                <sphereGeometry args={[0.11, 8, 8]} />
+                <meshStandardMaterial color="#e0b48a" />
+              </mesh>
+            </group>
+          </group>
+        );
+      })}
+    </group>
+  );
+};
 
 /** A tower with a procedural window facade (no image downloads). */
 const Tower: React.FC<{
@@ -30,8 +105,10 @@ const Tower: React.FC<{
     const across = curved ? (Math.PI * w) / 3.2 : Math.max(w, d) / 3.2;
     return repeated(facadeTexture(kind), Math.max(1, Math.round(across)), Math.max(1, h / 5.6));
   }, [facade, glass, curved, w, d, h]);
+  const reveal = useContext(RevealCtx);
   return (
     <group position={position}>
+      {reveal.on && <BuildingInside w={w} d={d} h={h} curved={curved} kind={reveal.kind} />}
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
         {curved ? <cylinderGeometry args={[w / 2, w / 2, h, sides ?? 28]} /> : <boxGeometry args={[w, h, d]} />}
         <meshStandardMaterial
@@ -90,8 +167,10 @@ const StoneWall: React.FC<{ position: V3; length: number; h: number; rotY?: numb
 
 const StoneHouse: React.FC<{ position: V3; w: number; d: number; h: number }> = ({ position, w, d, h }) => {
   const map = useMemo(() => repeated(facadeTexture('stone'), Math.max(1, Math.round(w / 2.4)), Math.max(1, h / 4.5)), [w, h]);
+  const reveal = useContext(RevealCtx);
   return (
     <group position={position}>
+      {reveal.on && <BuildingInside w={w} d={d} h={h} curved={false} kind={w > 5 ? 'office' : 'home'} />}
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, h, d]} />
         <meshStandardMaterial map={map} roughness={0.95} />
