@@ -4,7 +4,10 @@ import { EffectComposer, Bloom, N8AO, Vignette, SMAA } from '@react-three/postpr
 import { IsraelMapWorld } from './components/world/IsraelMapWorld';
 import { CityHubs } from './components/world/CityHubs';
 import { PlayerWithTik } from './components/world/PlayerWithTik';
-import { JobMarkers } from './components/world/JobMarkers';
+import { JobMarkers, JobStands } from './components/world/JobMarkers';
+import { JobsModal } from './components/ui/JobsModal';
+import { Railway, Train, Traffic } from './components/world/Transport';
+import { TrainRideBanner } from './components/ui/TrainRideBanner';
 import { PaycheckModal } from './components/ui/PaycheckModal';
 import { HUD } from './components/ui/HUD';
 import { HubModal } from './components/ui/HubModal';
@@ -24,8 +27,8 @@ export const App: React.FC = () => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const s = useGameStore.getState();
-      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck;
-      if (s.tutorialOpen || s.paycheck) return;
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide;
+      if (s.tutorialOpen || s.paycheck || s.trainRide) return;
 
       if (e.code === 'KeyP' || e.code === 'Tab') {
         e.preventDefault();
@@ -35,6 +38,12 @@ export const App: React.FC = () => {
         if (s.tikOpen) s.setTikOpen(false);
         if (s.trainOpen) s.setTrainOpen(false);
         if (s.infoOpen) s.setInfoOpen(false);
+        if (s.jobsOpen) s.setJobsOpen(false);
+      } else if (e.code === 'KeyJ' && !anyOpen) {
+        s.setJobsOpen(true);
+      } else if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') && !anyOpen && s.nearbyJob && !s.activeJob && s.jobYear !== s.year) {
+        e.preventDefault();
+        s.startJob(s.nearbyJob);
       } else if (e.code === 'KeyM' && !s.liteMode && !anyOpen) {
         s.setOverview(!s.overview);
       } else if (e.code === 'KeyT' && !s.liteMode && !anyOpen) {
@@ -64,6 +73,10 @@ export const App: React.FC = () => {
             <CityHubs />
             <PlayerWithTik />
             <JobMarkers />
+            <JobStands />
+            <Railway />
+            <Train />
+            <Traffic />
           </Suspense>
           {highGraphics && (
             <EffectComposer multisampling={0}>
@@ -82,6 +95,8 @@ export const App: React.FC = () => {
       <InfoModal />
       <TutorialModal />
       <PaycheckModal />
+      <JobsModal />
+      <TrainRideBanner />
     </div>
   );
 };

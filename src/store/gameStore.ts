@@ -12,6 +12,7 @@ import {
   YearEvent,
 } from '../types/game';
 import { AssetKey, FIRST_YEAR, LAST_YEAR, START_RATE, yearData } from '../data/history';
+import { nearestStation, railPath } from '../data/rail';
 
 export const START_CASH = 50000;
 export const MIN_REASONING_CHARS = 15;
@@ -207,6 +208,12 @@ export interface Job {
   pay: number;
   /** Where the player walks to during the job, in world coordinates [x, z]. */
   targets: Array<[number, number]>;
+  /** The job stand in the city, where the job starts [x, z]. */
+  stand: [number, number];
+  /** Who waits at each stop, and what the player does there. */
+  stopLabel: string;
+  action: string;
+  boxColor: string;
 }
 
 /** One summer job per year. Pay is an illustrative figure for a teen's summer job. */
@@ -219,6 +226,10 @@ export const JOBS: Job[] = [
     task: 'הביאו 3 משלוחים לנקודות על הטיילת',
     pay: 3000,
     targets: [[-20, -16], [-21, 6], [-12, 10]],
+    stand: [-8.5, -8.5],
+    stopLabel: 'לקוח מחכה לגלידה',
+    action: 'מוסרים את הגלידה',
+    boxColor: '#f472b6',
   },
   {
     id: 'job-camp',
@@ -227,7 +238,11 @@ export const JOBS: Job[] = [
     description: 'הדרכה בקייטנת קיץ בירושלים.',
     task: 'אספו את 3 קבוצות הילדים מהנקודות המסומנות',
     pay: 3200,
-    targets: [[6, 12], [20, -6], [3, -8]],
+    targets: [[6, 14], [20, -6], [12, -8]],
+    stand: [8.5, 7.5],
+    stopLabel: 'קבוצת ילדים',
+    action: 'מדריכים את הקבוצה',
+    boxColor: '#22c55e',
   },
   {
     id: 'job-flyers',
@@ -237,6 +252,10 @@ export const JOBS: Job[] = [
     task: 'חלקו עלונים ב-3 רחובות',
     pay: 2600,
     targets: [[-16, -24], [0, -30], [-2, -40]],
+    stand: [-5.5, -24.5],
+    stopLabel: 'תיבות דואר',
+    action: 'מחלקים עלונים',
+    boxColor: '#e2e8f0',
   },
   {
     id: 'job-tutor',
@@ -245,7 +264,11 @@ export const JOBS: Job[] = [
     description: 'עזרה לתלמידי חטיבת ביניים בבאר שבע.',
     task: 'לכו ל-3 תלמידים ותנו שיעור',
     pay: 3400,
-    targets: [[-14, 26], [6, 22], [-12, 40]],
+    targets: [[-14, 26], [6, 22], [-14, 37]],
+    stand: [0.5, 25],
+    stopLabel: 'תלמיד מחכה לשיעור',
+    action: 'מלמדים מתמטיקה',
+    boxColor: '#60a5fa',
   },
 ];
 
@@ -348,6 +371,11 @@ interface GameState {
   playerPos: [number, number, number];
   playerRot: number;
   nearbyHub: CityHubId | null;
+  /** Job stand the player is standing at. */
+  nearbyJob: string | null;
+  jobsOpen: boolean;
+  /** A train ride in progress (3D mode): the track to follow, and a job to start on arrival. */
+  trainRide: { to: CityHubId; path: Array<[number, number]>; thenJob?: string } | null;
 
   liteMode: boolean;
   /** Extra visual effects for strong computers. */
@@ -364,6 +392,10 @@ interface GameState {
 
   setPlayerTransform: (pos: [number, number, number], rot: number) => void;
   setNearby: (hub: CityHubId | null) => void;
+  setNearbyJob: (id: string | null) => void;
+  setJobsOpen: (open: boolean) => void;
+  startTrainRide: (to: CityHubId, thenJob?: string) => void;
+  finishTrainRide: () => void;
   setOpenHub: (id: CityHubId | null) => void;
   setTikOpen: (open: boolean, tab?: TikTab) => void;
   setTikTab: (tab: TikTab) => void;
@@ -410,6 +442,9 @@ const initialGame = () => ({
   playerPos: [-6, 0, -4] as [number, number, number],
   playerRot: 0,
   nearbyHub: null as CityHubId | null,
+  nearbyJob: null as string | null,
+  jobsOpen: false,
+  trainRide: null as { to: CityHubId; path: Array<[number, number]>; thenJob?: string } | null,
   openHub: null as CityHubId | null,
   tikOpen: false,
   trainOpen: false,
@@ -430,6 +465,29 @@ export const useGameStore = create<GameState>()(
   setPlayerTransform: (pos, rot) => set({ playerPos: pos, playerRot: rot }),
   setNearby: (hub) => {
     if (get().nearbyHub !== hub) set({ nearbyHub: hub });
+  },
+  setNearbyJob: (id) => {
+    if (get().nearbyJob !== id) set({ nearbyJob: id });
+  },
+  setJobsOpen: (open) => set({ jobsOpen: open, openHub: null, tikOpen: false, trainOpen: false }),
+  startTrainRide: (to, thenJob) => {
+    const s = get();
+    const [px, , pz] = s.playerPos;
+    const from = nearestStation(px, pz);
+    if (from === to) {
+      s.travelTo(to);
+      if (thenJob) s.startJob(thenJob);
+      set({ trainOpen: false, jobsOpen: false });
+      return;
+    }
+    set({ trainRide: { to, path: railPath(from, to), thenJob }, trainOpen: false, jobsOpen: false, overview: false });
+  },
+  finishTrainRide: () => {
+    const ride = get().trainRide;
+    if (!ride) return;
+    set({ trainRide: null });
+    get().travelTo(ride.to);
+    if (ride.thenJob) get().startJob(ride.thenJob);
   },
   setOpenHub: (id) => set((s) => ({ openHub: id, tikOpen: id ? false : s.tikOpen, trainOpen: false })),
   setTikOpen: (open, tab) =>
@@ -615,7 +673,7 @@ export const useGameStore = create<GameState>()(
     const s = get();
     if (s.isGameOver() || s.activeJob || s.jobYear === s.year) return;
     const job = JOBS.find((j) => j.id === jobId)!;
-    set({ activeJob: { jobId, done: 0 }, openHub: null, toastMessage: `התחלתם לעבוד: ${job.task}. הנקודות מסומנות בעמודי אור.` });
+    set({ activeJob: { jobId, done: 0 }, openHub: null, jobsOpen: false, toastMessage: `התחלתם לעבוד! ${job.task}. לכו לעמוד האור הצהוב.` });
   },
   cancelJob: () => set({ activeJob: null, toastMessage: 'עזבתם את העבודה. אפשר לחזור אליה מאוחר יותר השנה.' }),
   reachJobTarget: () => {
@@ -626,14 +684,18 @@ export const useGameStore = create<GameState>()(
     if (done >= job.targets.length) {
       set({ activeJob: null, jobYear: s.year, paycheck: { jobId: job.id, pay: job.pay } });
     } else {
-      set({ activeJob: { ...s.activeJob, done }, toastMessage: `כל הכבוד! ${done} מתוך ${job.targets.length}` });
+      const lessons = [
+        'כל עצירה מוסיפה לשכר. הכנסה מעבודה היא הבסיס לחיסכון ולהשקעה.',
+        'בתלוש שכר אמיתי יש ברוטו (לפני ניכויים) ונטו (מה שנכנס לחשבון).',
+      ];
+      set({ activeJob: { ...s.activeJob, done }, toastMessage: `${job.action} (${done}/${job.targets.length}). ${lessons[(done - 1) % lessons.length]}` });
     }
   },
   finishJobNow: (jobId) => {
     const s = get();
     if (s.isGameOver() || s.jobYear === s.year) return;
     const job = JOBS.find((j) => j.id === jobId)!;
-    set({ activeJob: null, jobYear: s.year, paycheck: { jobId, pay: job.pay }, openHub: null });
+    set({ activeJob: null, jobYear: s.year, paycheck: { jobId, pay: job.pay }, openHub: null, jobsOpen: false });
   },
   cashPaycheck: (saved, note) => {
     const s = get();

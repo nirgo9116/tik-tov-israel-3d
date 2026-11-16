@@ -253,6 +253,7 @@ const Forest: React.FC = () => {
     };
     const clear = (x: number, z: number) =>
       Math.abs(x + 4) < 7 || (Math.abs(z) < 7 && x > -18 && x < 16) || // roads
+      (Math.abs(x - 2.5) < 2.2 && z > -22 && z < 27) || (Math.abs(z - 7) < 2 && x > -11 && x < 4) || (Math.abs(z + 20) < 2 && x > -10 && x < 4) || // railway
       [[-10, -34, 9], [-18, -4, 10], [15, 3, 10], [-4, 34, 10]].some(([cx, cz, rr]) => Math.hypot(x - cx, z - cz) < rr);
     while (out.length < 140) {
       const x = -20 + r() * 44;

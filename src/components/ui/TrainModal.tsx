@@ -6,6 +6,8 @@ export const TrainModal: React.FC = () => {
   const open = useGameStore((s) => s.trainOpen);
   const setTrainOpen = useGameStore((s) => s.setTrainOpen);
   const travelTo = useGameStore((s) => s.travelTo);
+  const startTrainRide = useGameStore((s) => s.startTrainRide);
+  const liteMode = useGameStore((s) => s.liteMode);
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={() => setTrainOpen(false)}>
@@ -20,7 +22,7 @@ export const TrainModal: React.FC = () => {
         </div>
         <div className="train-grid">
           {CITY_HUBS.map((hub) => (
-            <button key={hub.id} className="train-stop" style={{ borderColor: hub.color }} onClick={() => travelTo(hub.id)}>
+            <button key={hub.id} className="train-stop" style={{ borderColor: hub.color }} onClick={() => (liteMode ? travelTo(hub.id) : startTrainRide(hub.id))}>
               <span className="train-dot" style={{ backgroundColor: hub.color }} />
               <strong>{hub.hebrewName}</strong>
               <span>{hub.hubTitle}</span>

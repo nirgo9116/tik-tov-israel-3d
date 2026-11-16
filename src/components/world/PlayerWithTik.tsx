@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CITY_HUBS, JOBS, useGameStore } from '../../store/gameStore';
+import { HANDOVER_SECONDS, jobFx } from './jobFx';
 
 const KEYS: Record<string, boolean> = {};
 /** Camera distance behind the player; changed with the mouse wheel or + / - keys. */
@@ -112,17 +113,22 @@ export const PlayerWithTik: React.FC = () => {
   const { camera } = useThree();
   const leftLegRef = useRef<THREE.Mesh>(null);
   const rightLegRef = useRef<THREE.Mesh>(null);
+  const leftArmRef = useRef<THREE.Group>(null);
+  const rightArmRef = useRef<THREE.Group>(null);
+  const carryRef = useRef<THREE.Mesh>(null);
 
   const playerPos = useGameStore((s) => s.playerPos);
   const playerRot = useGameStore((s) => s.playerRot);
   const holdings = useGameStore((s) => s.holdings);
   const overview = useGameStore((s) => s.overview);
-  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck));
+  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen));
   const getRubric = useGameStore((s) => s.getRubric);
   const setPlayerTransform = useGameStore((s) => s.setPlayerTransform);
   const setNearby = useGameStore((s) => s.setNearby);
   const activeJob = useGameStore((s) => s.activeJob);
   const reachJobTarget = useGameStore((s) => s.reachJobTarget);
+  const setNearbyJob = useGameStore((s) => s.setNearbyJob);
+  const currentJob = activeJob ? JOBS.find((j) => j.id === activeJob.jobId) : undefined;
 
   const rubric = getRubric();
   const hasBank = holdings.some((h) => h.category === 'bank');
@@ -158,8 +164,13 @@ export const PlayerWithTik: React.FC = () => {
     };
   }, []);
 
+  const riding = useGameStore((s) => Boolean(s.trainRide));
+
   useFrame(({ clock }, rawDelta) => {
+    if (useGameStore.getState().trainRide) return; // the Train component drives the camera
     const dt = Math.min(rawDelta, 0.05);
+    const now = clock.getElapsedTime();
+    const handingOver = now < jobFx.busyUntil;
     const forward = (KEYS['KeyW'] || KEYS['ArrowUp'] ? 1 : 0) - (KEYS['KeyS'] || KEYS['ArrowDown'] ? 1 : 0);
     const turn = (KEYS['KeyA'] || KEYS['ArrowLeft'] ? 1 : 0) - (KEYS['KeyD'] || KEYS['ArrowRight'] ? 1 : 0);
 
@@ -167,7 +178,7 @@ export const PlayerWithTik: React.FC = () => {
     let nz = playerPos[2];
     let nextRot = playerRot;
 
-    if (!paused) {
+    if (!paused && !handingOver) {
       const walkSpeed = 12;
       nextRot = playerRot + turn * 3.2 * dt;
       if (forward !== 0) {
@@ -188,6 +199,31 @@ export const PlayerWithTik: React.FC = () => {
       }
     }
 
+    // Arms: swing while walking, hold the package during a job, reach out when handing it over
+    if (leftArmRef.current && rightArmRef.current) {
+      let a: number;
+      if (handingOver) a = -1.6 + Math.sin(now * 10) * 0.15;
+      else if (activeJob) a = -1.1;
+      else a = forward !== 0 && !paused ? Math.sin(now * 12) * 0.5 : 0;
+      leftArmRef.current.rotation.x = activeJob || handingOver ? a : a;
+      rightArmRef.current.rotation.x = activeJob || handingOver ? a : -a;
+    }
+    if (carryRef.current) carryRef.current.visible = Boolean(activeJob) && !handingOver;
+    if (handingOver) {
+      // Face the person at the stop
+      const want = Math.atan2(jobFx.to[0] - nx, jobFx.to[1] - nz);
+      let d = want - nextRot;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      if (Math.abs(d) > 0.01) {
+        nextRot += d * Math.min(1, dt * 8);
+        setPlayerTransform([nx, 0, nz], nextRot);
+      }
+    } else if (jobFx.busyUntil > 0) {
+      // Hand-over finished: count the stop
+      jobFx.busyUntil = 0;
+      reachJobTarget();
+    }
+
     let foundHub = null;
     for (const hub of CITY_HUBS) {
       if (Math.hypot(nx - hub.entryPos[0], nz - hub.entryPos[2]) < 3.8) {
@@ -197,10 +233,23 @@ export const PlayerWithTik: React.FC = () => {
     }
     setNearby(foundHub);
 
-    if (activeJob && !paused) {
-      const job = JOBS.find((j) => j.id === activeJob.jobId);
-      const target = job?.targets[activeJob.done];
-      if (target && Math.hypot(nx - target[0], nz - target[1]) < 2.4) reachJobTarget();
+    let foundJob: string | null = null;
+    for (const job of JOBS) {
+      if (Math.hypot(nx - job.stand[0], nz - (job.stand[1] + 1.6)) < 2.2) foundJob = job.id;
+    }
+    setNearbyJob(foundJob);
+
+    const liveJob = useGameStore.getState().activeJob;
+    if (currentJob && liveJob && !paused && !handingOver && jobFx.busyUntil === 0) {
+      const target = currentJob.targets[liveJob.done];
+      if (target && Math.hypot(nx - target[0], nz - target[1]) < 2.6) {
+        jobFx.startedAt = now;
+        jobFx.busyUntil = now + HANDOVER_SECONDS;
+        jobFx.from = [nx, nz];
+        jobFx.to = target;
+        jobFx.earned = currentJob.pay / currentJob.targets.length;
+        jobFx.coinUntil = now + 2.2;
+      }
     }
 
     if (KEYS['Equal'] || KEYS['NumpadAdd']) camZoom = Math.max(ZOOM_MIN, camZoom - 20 * dt);
@@ -222,7 +271,7 @@ export const PlayerWithTik: React.FC = () => {
   });
 
   return (
-    <group position={playerPos} rotation={[0, playerRot, 0]}>
+    <group position={playerPos} rotation={[0, playerRot, 0]} visible={!riding}>
       <mesh ref={leftLegRef} position={[-0.22, 0.55, 0]} castShadow>
         <boxGeometry args={[0.26, 0.9, 0.28]} />
         <meshStandardMaterial color="#1e3a8a" />
@@ -256,19 +305,28 @@ export const PlayerWithTik: React.FC = () => {
         <sphereGeometry args={[0.32, 16, 16]} />
         <meshStandardMaterial color="#fed7aa" />
       </mesh>
-      {/* Arms; during a summer job the player carries a package */}
-      <mesh position={[-0.46, 1.4, activeJob ? 0.25 : 0]} rotation={[activeJob ? -1.1 : 0, 0, 0]} castShadow>
-        <boxGeometry args={[0.18, 0.75, 0.2]} />
-        <meshStandardMaterial color="#f8fafc" />
+      {/* Arms pivot at the shoulder; during a summer job the player carries the job's package */}
+      <group ref={leftArmRef} position={[-0.46, 1.75, 0]}>
+        <mesh position={[0, -0.36, 0]} castShadow>
+          <boxGeometry args={[0.18, 0.75, 0.2]} />
+          <meshStandardMaterial color="#f8fafc" />
+        </mesh>
+      </group>
+      <group ref={rightArmRef} position={[0.46, 1.75, 0]}>
+        <mesh position={[0, -0.36, 0]} castShadow>
+          <boxGeometry args={[0.18, 0.75, 0.2]} />
+          <meshStandardMaterial color="#f8fafc" />
+        </mesh>
+      </group>
+      <mesh ref={carryRef} position={[0, 1.55, 0.7]} visible={false} castShadow>
+        <boxGeometry args={[0.7, 0.45, 0.5]} />
+        <meshStandardMaterial color={currentJob?.boxColor ?? '#c08a4a'} roughness={0.8} />
       </mesh>
-      <mesh position={[0.46, 1.4, activeJob ? 0.25 : 0]} rotation={[activeJob ? -1.1 : 0, 0, 0]} castShadow>
-        <boxGeometry args={[0.18, 0.75, 0.2]} />
-        <meshStandardMaterial color="#f8fafc" />
-      </mesh>
-      {activeJob && (
-        <mesh position={[0, 1.35, 0.6]} castShadow>
-          <boxGeometry args={[0.7, 0.45, 0.5]} />
-          <meshStandardMaterial color="#c08a4a" roughness={0.9} />
+      {currentJob && (
+        /* Work cap in the job's colour */
+        <mesh position={[0, 2.36, 0.05]} castShadow>
+          <cylinderGeometry args={[0.3, 0.33, 0.16, 16]} />
+          <meshStandardMaterial color={currentJob.boxColor} />
         </mesh>
       )}
     </group>

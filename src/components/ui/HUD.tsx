@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles } from 'lucide-react';
+import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles, Briefcase } from 'lucide-react';
 import { CITY_HUBS, JOBS, START_CASH, useGameStore } from '../../store/gameStore';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
 
@@ -33,6 +33,12 @@ export const HUD: React.FC = () => {
   const advanceYear = useGameStore((s) => s.advanceYear);
   const activeJob = useGameStore((s) => s.activeJob);
   const cancelJob = useGameStore((s) => s.cancelJob);
+  const nearbyJob = useGameStore((s) => s.nearbyJob);
+  const jobYear = useGameStore((s) => s.jobYear);
+  const startJob = useGameStore((s) => s.startJob);
+  const setJobsOpen = useGameStore((s) => s.setJobsOpen);
+  const standJob = JOBS.find((j) => j.id === nearbyJob);
+  const canWork = !activeJob && jobYear !== year;
   const clearToast = useGameStore((s) => s.clearToast);
 
   const netWorth = getNetWorth();
@@ -45,7 +51,7 @@ export const HUD: React.FC = () => {
 
   useEffect(() => {
     if (!toastMessage) return;
-    const t = setTimeout(() => clearToast(), 5000);
+    const t = setTimeout(() => clearToast(), 7000);
     return () => clearTimeout(t);
   }, [toastMessage, clearToast]);
 
@@ -147,7 +153,18 @@ export const HUD: React.FC = () => {
 
       {!liteMode && (
         <div className="interaction-prompts">
-          {activeHub && (
+          {standJob && canWork && (
+            <button className="prompt-btn prompt-job" onClick={() => startJob(standJob.id)}>
+              <Briefcase size={18} />
+              <span>
+                עבודה בקיץ: <strong>{standJob.title}</strong> ({`₪${standJob.pay.toLocaleString('he-IL')}`}) — מקש <b>E</b> כדי להתחיל
+              </span>
+            </button>
+          )}
+          {standJob && !canWork && !activeJob && (
+            <div className="prompt-btn">כבר עבדתם השנה. אפשר לעבוד שוב אחרי שהמורה יעביר שנה.</div>
+          )}
+          {activeHub && !standJob && (
             <button className="prompt-btn prompt-landmark" onClick={() => setOpenHub(activeHub.id)}>
               <MapPin size={18} />
               <span>
@@ -189,7 +206,7 @@ export const HUD: React.FC = () => {
       <div className="bottom-right-actions">
         {!liteMode && (
           <div className="controls-hint">
-            <b>WASD / חיצים</b> הליכה • <b>גלגלת או + / -</b> זום • <b>M</b> כל הארץ • <b>Enter</b> כניסה לעיר • <b>T</b> רכבת • <b>P</b> התיק שלי
+            <b>WASD / חיצים</b> הליכה • <b>גלגלת או + / -</b> זום • <b>M</b> כל הארץ • <b>Enter</b> כניסה לעיר • <b>E</b> עבודה • <b>T</b> רכבת • <b>P</b> התיק שלי
           </div>
         )}
         {!liteMode && (
@@ -204,6 +221,10 @@ export const HUD: React.FC = () => {
             <span>רכבת ישראל (T)</span>
           </button>
         )}
+        <button className={`phone-fab job-fab${canWork ? ' pulse' : ''}`} onClick={() => setJobsOpen(true)}>
+          <Briefcase size={20} />
+          <span>עבודה בקיץ (J)</span>
+        </button>
         <button className="phone-fab" onClick={() => setTikOpen(true)}>
           <Backpack size={20} />
           <span>התיק שלי (P)</span>
