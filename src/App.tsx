@@ -21,7 +21,7 @@ import { TrainModal } from './components/ui/TrainModal';
 import { InfoModal } from './components/ui/InfoModal';
 import { TutorialModal } from './components/ui/TutorialModal';
 import { LiteMap } from './components/ui/LiteMap';
-import { useGameStore } from './store/gameStore';
+import { stageInfo, useGameStore } from './store/gameStore';
 
 export const App: React.FC = () => {
   const liteMode = useGameStore((s) => s.liteMode);
@@ -36,6 +36,10 @@ export const App: React.FC = () => {
       const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo || s.stageIntroOpen;
       if (s.tutorialOpen || s.paycheck || s.trainRide) return;
 
+      if (e.code === 'KeyI' && !anyOpen) {
+        s.setOpenHub(stageInfo(s.stage).city);
+        return;
+      }
       if (e.code === 'KeyP' || e.code === 'Tab') {
         e.preventDefault();
         s.setTikOpen(!s.tikOpen);

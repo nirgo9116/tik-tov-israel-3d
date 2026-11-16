@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles, Briefcase } from 'lucide-react';
+import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles, Briefcase, Coins } from 'lucide-react';
 import { CITY_HUBS, JOBS, cityStage, stageInfo, useGameStore } from '../../store/gameStore';
 import { INTERIORS } from '../../data/interiors';
 import { runStation } from './stations';
@@ -275,7 +275,7 @@ export const HUD: React.FC = () => {
       <div className="bottom-right-actions">
         {!liteMode && interior && (
           <div className="controls-hint">
-            <b>WASD / חיצים</b> הליכה • <b>E</b> שימוש בעמדה • <b>Esc</b> יציאה מהבניין • <b>P</b> התיק שלי
+            <b>WASD / חיצים</b> הליכה • <b>E</b> שימוש בעמדה • <b>Esc</b> יציאה מהבניין • <b>I</b> השקעה • <b>P</b> התיק שלי
           </div>
         )}
         {!liteMode && interior && (
@@ -286,7 +286,7 @@ export const HUD: React.FC = () => {
         )}
         {!liteMode && !interior && (
           <div className="controls-hint">
-            <b>WASD / חיצים</b> הליכה • <b>גלגלת או + / -</b> זום • <b>M</b> כל הארץ • <b>Enter</b> כניסה לעיר • <b>E</b> עבודה • <b>T</b> רכבת • <b>P</b> התיק שלי
+            <b>WASD / חיצים</b> הליכה • <b>גלגלת או + / -</b> זום • <b>M</b> כל הארץ • <b>Enter</b> כניסה לעיר • <b>E</b> עבודה • <b>T</b> רכבת • <b>I</b> השקעה • <b>P</b> התיק שלי
           </div>
         )}
         {!liteMode && !interior && (
@@ -307,6 +307,10 @@ export const HUD: React.FC = () => {
           <span>עבודה בקיץ (J)</span>
         </button>
         )}
+        <button className="phone-fab invest-fab" style={{ background: st.color }} onClick={() => setOpenHub(st.city)} title={`פותח את מסך ההשקעה של ${st.name}`}>
+          <Coins size={20} />
+          <span>השקעה (I)</span>
+        </button>
         <button className="phone-fab" onClick={() => setTikOpen(true)}>
           <Backpack size={20} />
           <span>התיק שלי (P)</span>
