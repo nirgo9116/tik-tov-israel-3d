@@ -8,6 +8,7 @@ import { INTERIORS, ROOM_HALF_D, ROOM_HALF_W, Station } from '../../data/interio
 import type { CityHubId } from '../../types/game';
 import { HEBREW_FONT } from '../../fonts';
 import { Npc } from './JobMarkers';
+import { PortfolioTower } from './PortfolioTower';
 
 const H = 4.6; // ceiling height
 
@@ -298,6 +299,7 @@ export const InteriorScene: React.FC<{ id: CityHubId }> = ({ id }) => {
       </Text>
 
       <Props id={id} accent={def.accent} />
+      <PortfolioTower position={[7.8, 0, 5]} height={3} />
       {def.stations.map((st) => (
         <React.Fragment key={st.id}>
           <StationMarker station={st} accent={def.accent} />

@@ -3,12 +3,15 @@ import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, H
 import { CITY_HUBS, JOBS, cityStage, stageInfo, useGameStore } from '../../store/gameStore';
 import { INTERIORS } from '../../data/interiors';
 import { runStation } from './stations';
+import { composition } from '../../data/composition';
+import { MixBar } from './Composition';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 
 export const HUD: React.FC = () => {
   const cash = useGameStore((s) => s.cash);
+  const holdings = useGameStore((s) => s.holdings);
   const year = useGameStore((s) => s.year);
   const interestRate = useGameStore((s) => s.interestRate);
   const priceLevel = useGameStore((s) => s.priceLevel);
@@ -215,6 +218,19 @@ export const HUD: React.FC = () => {
           )}
         </div>
       )}
+
+      {(() => {
+        const mix = composition(cash, holdings);
+        const invested = mix.filter((x) => x.key !== 'cash').reduce((a, x) => a + x.value, 0);
+        const t = mix.reduce((a, x) => a + x.value, 0);
+        return (
+          <button className={`hud-mix ${liteMode || interior ? 'hud-mix-low' : ''}`} onClick={() => setTikOpen(true, 'mix')} title="הרכב התיק: לחצו לפירוט">
+            <span>הרכב התיק</span>
+            <MixBar slices={mix} />
+            <b>{t > 0 ? Math.round((invested / t) * 100) : 0}% מושקע</b>
+          </button>
+        );
+      })()}
 
       {!liteMode && !interior && (
         <div className="minimap-card">

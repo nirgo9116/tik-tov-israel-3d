@@ -9,6 +9,7 @@ import { JobsModal } from './components/ui/JobsModal';
 import { Railway, Train, Traffic } from './components/world/Transport';
 import { TrainRideBanner } from './components/ui/TrainRideBanner';
 import { InteriorScene } from './components/world/InteriorScene';
+import { StageTower } from './components/world/PortfolioTower';
 import { StationInfoModal } from './components/ui/StationInfoModal';
 import { StageIntroModal } from './components/ui/StageIntroModal';
 import { runStation } from './components/ui/stations';
@@ -102,6 +103,7 @@ export const App: React.FC = () => {
             <Railway />
             <Train />
             <Traffic />
+            <StageTower />
             </>
             )}
           </Suspense>

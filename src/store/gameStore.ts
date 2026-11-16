@@ -13,6 +13,7 @@ import {
 } from '../types/game';
 import { AssetKey, FIRST_YEAR, LAST_YEAR, START_RATE, yearData } from '../data/history';
 import { nearestStation, railPath } from '../data/rail';
+import { composition, Slice } from '../data/composition';
 
 /** The three stages ("worlds") of the game. Each one replays 2017–2024 with its own budget. */
 export type StageNum = 1 | 2 | 3;
@@ -407,14 +408,16 @@ function checkMissions(missions: Mission[], holdings: Holding[], journal: Journa
   });
 }
 
-type TikTab = 'bag' | 'missions' | 'journal' | 'rubric';
+type TikTab = 'bag' | 'mix' | 'missions' | 'journal' | 'rubric';
 
 interface GameState {
   /** Current stage (world) and its starting budget. */
   stage: StageNum;
   startCash: number;
   /** Results of stages that the class already finished. */
-  stageResults: Array<{ stage: StageNum; startCash: number; netWorth: number; realValue: number; score: number }>;
+  stageResults: Array<{ stage: StageNum; startCash: number; netWorth: number; realValue: number; score: number; slices?: Slice[] }>;
+  /** Portfolio mix at the end of each finished year of the current stage. */
+  snapshots: Array<{ year: number; slices: Slice[] }>;
   stageIntroOpen: boolean;
   setStageIntroOpen: (open: boolean) => void;
   /** Teacher only: save this stage's result and open the next world. */
@@ -516,6 +519,7 @@ const initialGame = (stage: StageNum = 1) => ({
   currentEvent: null as YearEvent | null,
   eventHistory: [] as YearEvent[],
   activeYears: [] as number[],
+  snapshots: [] as Array<{ year: number; slices: Slice[] }>,
   activeJob: null as ActiveJob | null,
   jobYear: null as number | null,
   paycheck: null as { jobId: string; pay: number } | null,
@@ -783,6 +787,7 @@ export const useGameStore = create<GameState>()(
       holdings,
       journal,
       missions: checkMissions(s.missions, holdings, journal, nextYear, s.cash, true),
+      snapshots: [...s.snapshots, { year: s.year, slices: composition(s.cash, holdings) }],
       currentEvent: event,
       eventHistory: s.currentEvent ? [s.currentEvent, ...s.eventHistory] : s.eventHistory,
       toastMessage: over ? (s.stage < 3 ? `${stageInfo(s.stage).name} הסתיים! פתחו את התיק לסיכום. המורה יפתח את השלב הבא.` : 'המשחק הסתיים! פתחו את התיק לסיכום של שלושת השלבים.') : `עברנו ל-${nextYear}. ${data.headline}`,
@@ -851,7 +856,7 @@ export const useGameStore = create<GameState>()(
     const s = get();
     if (s.stage >= 3) return;
     const netWorth = s.getNetWorth();
-    const result = { stage: s.stage, startCash: s.startCash, netWorth, realValue: Math.round(netWorth / s.priceLevel), score: s.getRubric().total };
+    const result = { stage: s.stage, startCash: s.startCash, netWorth, realValue: Math.round(netWorth / s.priceLevel), score: s.getRubric().total, slices: composition(s.cash, s.holdings) };
     const next = (s.stage + 1) as StageNum;
     set({
       ...initialGame(next),
@@ -947,6 +952,7 @@ export const useGameStore = create<GameState>()(
         stage: s.stage,
         startCash: s.startCash,
         stageResults: s.stageResults,
+        snapshots: s.snapshots,
       }),
     }
   )

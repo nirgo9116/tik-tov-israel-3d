@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack, RotateCcw } from 'lucide-react';
+import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack, RotateCcw, PieChart } from 'lucide-react';
 import { MIN_REASONING_CHARS, STAGES, stageInfo, useGameStore } from '../../store/gameStore';
+import { composition } from '../../data/composition';
+import { Donut, MixByYear, MixLegend } from './Composition';
 import { FIRST_YEAR } from '../../data/history';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
@@ -45,6 +47,7 @@ export const TikBagModal: React.FC = () => {
   const stage = useGameStore((s) => s.stage);
   const startCash = useGameStore((s) => s.startCash);
   const stageResults = useGameStore((s) => s.stageResults);
+  const snapshots = useGameStore((s) => s.snapshots);
 
   if (!tikOpen) return null;
 
@@ -90,6 +93,9 @@ export const TikBagModal: React.FC = () => {
         <div className="phone-tabs">
           <button className={tikTab === 'bag' ? 'active' : ''} onClick={() => setTikTab('bag')}>
             <Backpack size={14} /> תכולה ({holdings.length})
+          </button>
+          <button className={tikTab === 'mix' ? 'active' : ''} onClick={() => setTikTab('mix')}>
+            <PieChart size={14} /> הרכב
           </button>
           <button className={tikTab === 'missions' ? 'active' : ''} onClick={() => setTikTab('missions')}>
             <Target size={14} /> משימות
@@ -225,6 +231,52 @@ export const TikBagModal: React.FC = () => {
               ))}
             </div>
           )}
+
+          {tikTab === 'mix' && (() => {
+            const now = composition(cash, holdings);
+            const rows = [
+              ...snapshots.map((sn) => ({ label: `סוף ${sn.year}`, slices: sn.slices })),
+              ...(over ? [] : [{ label: `עכשיו (${year})`, slices: now }]),
+            ];
+            return (
+              <div className="phone-section">
+                <h4 className="section-title">הרכב התיק עכשיו: {stageInfo(stage).name}</h4>
+                <div className="mix-top">
+                  <Donut slices={now} caption="שווי התיק" />
+                  <MixLegend slices={now} />
+                </div>
+                <p className="text-muted" style={{ fontSize: 12 }}>
+                  איזה חלק מהכסף נמצא בכל אפיק? כסף פנוי לא מרוויח, אבל אפשר להשתמש בו מיד.
+                </p>
+                <h4 className="section-title">איך ההרכב השתנה במהלך השלב</h4>
+                {rows.length > 0 && <MixByYear rows={rows} />}
+                <p className="text-muted" style={{ fontSize: 12 }}>
+                  כל עמודה היא 100% מהתיק בסוף שנה. ההרכב משתנה גם בלי לקנות או למכור: אפיק שעלה תופס חלק גדול יותר.
+                </p>
+                {stageResults.length > 0 && (
+                  <>
+                    <h4 className="section-title">ההרכב בסוף כל שלב</h4>
+                    <div className="mix-stages">
+                      {stageResults.map((r) =>
+                        r.slices && r.slices.length ? (
+                          <div key={r.stage} className="mix-stage-card">
+                            <b>{STAGES[r.stage - 1].name}</b>
+                            <Donut slices={r.slices} size={110} />
+                            <MixLegend slices={r.slices} />
+                          </div>
+                        ) : null
+                      )}
+                      <div className="mix-stage-card">
+                        <b>{stageInfo(stage).name} (עכשיו)</b>
+                        <Donut slices={now} size={110} />
+                        <MixLegend slices={now} />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {tikTab === 'rubric' && (
             <div className="phone-section">

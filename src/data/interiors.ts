@@ -37,7 +37,7 @@ export const INTERIORS: Record<CityHubId, InteriorDef> = {
     floor: '#e7e0d1',
     wall: '#d9cbb0',
     accent: '#10b981',
-    blockers: [[0, -4.6, 12, 1.2]],
+    blockers: [[0, -4.6, 12, 1.2], [7.8, 5, 1.6, 1.6]],
     stations: [
       { id: 'teller', label: 'דלפק הבנק: פיקדון רגיל או צמוד למדד', pos: [0, -3.2], action: { kind: 'invest' } },
       {
@@ -76,7 +76,7 @@ export const INTERIORS: Record<CityHubId, InteriorDef> = {
     floor: '#1f2937',
     wall: '#111827',
     accent: '#3b82f6',
-    blockers: [[-4.5, -1, 4, 1.6], [4.5, -1, 4, 1.6]],
+    blockers: [[-4.5, -1, 4, 1.6], [4.5, -1, 4, 1.6], [7.8, 5, 1.6, 1.6]],
     stations: [
       { id: 'desk', label: 'עמדת השקעה', pos: [0, 1.2], action: { kind: 'invest' } },
       {
@@ -115,7 +115,7 @@ export const INTERIORS: Record<CityHubId, InteriorDef> = {
     floor: '#cbb89d',
     wall: '#f1ece2',
     accent: '#f59e0b',
-    blockers: [[0, -3.6, 6, 1.4], [-6.5, 1.5, 3, 3]],
+    blockers: [[0, -3.6, 6, 1.4], [-6.5, 1.5, 3, 3], [7.8, 5, 1.6, 1.6]],
     stations: [
       { id: 'agent', label: 'שולחן המתווך', pos: [0, -2.2], action: { kind: 'invest' } },
       {
