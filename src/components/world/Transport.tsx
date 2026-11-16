@@ -4,6 +4,7 @@ import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { CITY_HUBS, useGameStore } from '../../store/gameStore';
 import { HEBREW_FONT } from '../../fonts';
+import { NearSign } from './NearSign';
 import { RAIL_EDGES, RAIL_NODES, STATIONS, pathLength, pointAt, railPath } from '../../data/rail';
 
 const TRAIN_SPEED = 13;
@@ -11,6 +12,7 @@ const CAR_GAP = 3.3;
 
 /** Track: gravel bed, two rails and sleepers along every edge, plus a platform at each station. */
 export const Railway: React.FC = () => {
+  const jobOn = useGameStore((s) => Boolean(s.activeJob));
   const sleepers = useMemo(() => {
     const out: Array<{ x: number; z: number; rot: number }> = [];
     for (const [a, b] of RAIL_EDGES) {
@@ -80,11 +82,15 @@ export const Railway: React.FC = () => {
                 <meshStandardMaterial color="#475569" />
               </mesh>
             ))}
-            <Billboard position={[0, 3.1, 0]}>
-              <Text font={HEBREW_FONT} direction="rtl" fontSize={0.5} color="#f8fafc" outlineWidth={0.06} outlineColor="#0f172a">
-                {`תחנת רכבת ${hub.hebrewName}`}
-              </Text>
-            </Billboard>
+            {!jobOn && (
+              <NearSign min={5} max={22}>
+                <Billboard position={[0, 3.1, 0]}>
+                  <Text font={HEBREW_FONT} direction="rtl" fontSize={0.42} color="#f8fafc" outlineWidth={0.05} outlineColor="#0f172a">
+                    {`תחנת רכבת ${hub.hebrewName}`}
+                  </Text>
+                </Billboard>
+              </NearSign>
+            )}
           </group>
         );
       })}

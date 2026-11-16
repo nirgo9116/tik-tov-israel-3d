@@ -4,7 +4,7 @@ import { EffectComposer, Bloom, N8AO, Vignette, SMAA } from '@react-three/postpr
 import { IsraelMapWorld } from './components/world/IsraelMapWorld';
 import { CityHubs } from './components/world/CityHubs';
 import { PlayerWithTik } from './components/world/PlayerWithTik';
-import { JobMarkers, JobStands } from './components/world/JobMarkers';
+import { JobMarkers, JobStands, NavArrow } from './components/world/JobMarkers';
 import { JobsModal } from './components/ui/JobsModal';
 import { Railway, Train, Traffic } from './components/world/Transport';
 import { TrainRideBanner } from './components/ui/TrainRideBanner';
@@ -74,6 +74,7 @@ export const App: React.FC = () => {
             <PlayerWithTik />
             <JobMarkers />
             <JobStands />
+            <NavArrow />
             <Railway />
             <Train />
             <Traffic />

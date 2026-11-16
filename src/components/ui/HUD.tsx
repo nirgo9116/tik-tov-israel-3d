@@ -135,14 +135,17 @@ export const HUD: React.FC = () => {
         </button>
       </div>
 
-      {toastMessage && <div className="toast-pill">{toastMessage}</div>}
+      {toastMessage && !activeJob && <div className="toast-pill">{toastMessage}</div>}
 
       {activeJob && (() => {
         const job = JOBS.find((j) => j.id === activeJob.jobId)!;
+        const t = job.targets[activeJob.done];
+        const meters = t ? Math.round(Math.hypot(t[0] - playerPos[0], t[1] - playerPos[2]) * 10) : 0;
         return (
           <div className="job-pill">
             <span>
-              🧺 <b>{job.title}</b>: {job.task} ({activeJob.done}/{job.targets.length}). לכו לעמוד האור הצהוב. לחצו M כדי לראות איפה הוא.
+              <b>{job.title}</b> · עצירה {activeJob.done + 1} מתוך {job.targets.length} · עוד {meters} מ׳. עקבו אחרי החץ הצהוב.
+              {toastMessage && <small className="job-pill-msg">{toastMessage}</small>}
             </span>
             <button className="btn-mini" onClick={cancelJob}>
               עזיבה
@@ -177,7 +180,7 @@ export const HUD: React.FC = () => {
 
       {!liteMode && (
         <div className="minimap-card">
-          <div className="minimap-title">מפת ישראל (צפון ▲)</div>
+          <div className="minimap-title">מפת ישראל (צפון ▲){activeJob ? " · צהוב: העצירה הבאה" : canWork ? " · ירוק: עבודה" : ""}</div>
           <div className="minimap-box israel-radar">
             <div className="radar-sea" />
             {CITY_HUBS.map((hub) => (
@@ -192,6 +195,18 @@ export const HUD: React.FC = () => {
                 title={hub.hebrewName}
               />
             ))}
+            {activeJob &&
+              (() => {
+                const job = JOBS.find((j) => j.id === activeJob.jobId)!;
+                const t = job.targets[activeJob.done];
+                return t ? (
+                  <div className="minimap-target" style={{ left: `${((t[0] + 28) / 56) * 100}%`, top: `${((t[1] + 44) / 88) * 100}%` }} title="העצירה הבאה" />
+                ) : null;
+              })()}
+            {canWork &&
+              JOBS.map((j) => (
+                <div key={j.id} className="minimap-stand" style={{ left: `${((j.stand[0] + 28) / 56) * 100}%`, top: `${((j.stand[1] + 44) / 88) * 100}%` }} title={`עבודה: ${j.title}`} />
+              ))}
             <div
               className="minimap-player"
               style={{

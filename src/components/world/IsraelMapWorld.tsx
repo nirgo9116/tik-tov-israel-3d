@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { NearSign } from './NearSign';
 import { HEBREW_FONT } from '../../fonts';
 import { Text, Billboard, Sky, Environment, Lightformer } from '@react-three/drei';
 import { asphaltTexture, groundTexture, repeated } from './textures';
@@ -189,21 +190,27 @@ export const IsraelMapWorld: React.FC = () => {
       ))}
 
       {/* Highway Direction Signs */}
+      <NearSign min={13} max={30}>
       <Billboard position={[-4, 3.6, -16]}>
-        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.85} color="#38bdf8" outlineWidth={0.08} outlineColor="#0f172a">
+        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.55} color="#38bdf8" outlineWidth={0.08} outlineColor="#0f172a">
           צפון: חיפה והגליל
         </Text>
       </Billboard>
+      </NearSign>
+      <NearSign min={13} max={30}>
       <Billboard position={[3, 3.6, -4.5]}>
-        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.85} color="#34d399" outlineWidth={0.08} outlineColor="#0f172a">
+        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.55} color="#34d399" outlineWidth={0.08} outlineColor="#0f172a">
           מזרח: ירושלים, כביש 1
         </Text>
       </Billboard>
+      </NearSign>
+      <NearSign min={13} max={30}>
       <Billboard position={[-4, 3.6, 16]}>
-        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.85} color="#c084fc" outlineWidth={0.08} outlineColor="#0f172a">
+        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.55} color="#c084fc" outlineWidth={0.08} outlineColor="#0f172a">
           דרום: באר שבע והנגב
         </Text>
       </Billboard>
+      </NearSign>
     </group>
   );
 };

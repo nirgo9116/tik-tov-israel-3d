@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { JOBS, useGameStore } from '../../store/gameStore';
 import { HEBREW_FONT } from '../../fonts';
 import { HANDOVER_SECONDS, jobFx } from './jobFx';
+import { NearSign } from './NearSign';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 
@@ -132,11 +133,15 @@ export const JobMarkers: React.FC = () => {
                   </mesh>
                 </>
               )}
-              <Billboard position={[0, 3.1, 0]}>
-                <Text font={HEBREW_FONT} direction="rtl" fontSize={0.55} color={done ? '#86efac' : current ? '#fef08a' : '#e2e8f0'} outlineWidth={0.06} outlineColor="#0f172a">
-                  {done ? 'תודה רבה!' : `${i + 1}. ${job.stopLabel}`}
-                </Text>
-              </Billboard>
+              {(current || done) && (
+                <NearSign min={0} max={current ? 70 : 14}>
+                  <Billboard position={[0, 3.1, 0]}>
+                    <Text font={HEBREW_FONT} direction="rtl" fontSize={0.5} color={done ? '#86efac' : '#fef08a'} outlineWidth={0.06} outlineColor="#0f172a">
+                      {done ? 'תודה רבה!' : job.stopLabel}
+                    </Text>
+                  </Billboard>
+                </NearSign>
+              )}
             </group>
           );
         })}
@@ -160,6 +165,7 @@ export const JobStands: React.FC = () => {
     }
   });
   const available = jobYear !== year && !activeJob;
+  if (activeJob) return null;
   return (
     <group>
       <group ref={icon}>
@@ -209,13 +215,51 @@ export const JobStands: React.FC = () => {
             <ringGeometry args={[0.9, 1.25, 28]} />
             <meshStandardMaterial color={available ? '#22c55e' : '#94a3b8'} emissive={available ? '#22c55e' : '#000'} emissiveIntensity={0.7} />
           </mesh>
-          <Billboard position={[0, 4.7, 0]}>
-            <Text font={HEBREW_FONT} direction="rtl" fontSize={0.6} color="#bbf7d0" outlineWidth={0.07} outlineColor="#052e16" textAlign="center">
-              {available ? `עבודה בקיץ: ${shekel(job.pay)}` : jobYear === year ? 'עבדתם השנה' : 'עבודה בקיץ'}
-            </Text>
-          </Billboard>
+          <NearSign min={4} max={24}>
+            <Billboard position={[0, 4.7, 0]}>
+              <Text font={HEBREW_FONT} direction="rtl" fontSize={0.45} color="#bbf7d0" outlineWidth={0.06} outlineColor="#052e16" textAlign="center">
+                {available ? `עבודה בקיץ: ${shekel(job.pay)}` : 'עבדתם השנה'}
+              </Text>
+            </Billboard>
+          </NearSign>
         </group>
       ))}
+    </group>
+  );
+};
+
+/** Yellow arrow on the ground next to the player, pointing to the next job stop. */
+export const NavArrow: React.FC = () => {
+  const g = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (!g.current) return;
+    const s = useGameStore.getState();
+    const job = s.activeJob ? JOBS.find((j) => j.id === s.activeJob!.jobId) : undefined;
+    const target = job?.targets[s.activeJob!.done];
+    if (!target || s.trainRide) {
+      g.current.visible = false;
+      return;
+    }
+    const [px, , pz] = s.playerPos;
+    const dx = target[0] - px;
+    const dz = target[1] - pz;
+    const d = Math.hypot(dx, dz);
+    g.current.visible = d > 3.5;
+    const rot = Math.atan2(dx, dz);
+    const bob = 0.15 * Math.sin(clock.getElapsedTime() * 5);
+    g.current.position.set(px + Math.sin(rot) * (0.9 + bob), 3.1, pz + Math.cos(rot) * (0.9 + bob));
+    g.current.rotation.set(0, rot, 0);
+  });
+  return (
+    <group ref={g} visible={false} scale={1.5}>
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.35]}>
+        <coneGeometry args={[0.45, 0.8, 4]} />
+        <meshStandardMaterial color="#facc15" emissive="#facc15" emissiveIntensity={0.9} />
+      </mesh>
+      <mesh position={[0, 0, -0.25]}>
+        <boxGeometry args={[0.22, 0.08, 0.6]} />
+        <meshStandardMaterial color="#facc15" emissive="#facc15" emissiveIntensity={0.9} />
+      </mesh>
     </group>
   );
 };
