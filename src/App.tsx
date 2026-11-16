@@ -31,6 +31,8 @@ export const App: React.FC = () => {
         if (s.tikOpen) s.setTikOpen(false);
         if (s.trainOpen) s.setTrainOpen(false);
         if (s.infoOpen) s.setInfoOpen(false);
+      } else if (e.code === 'KeyM' && !s.liteMode && !anyOpen) {
+        s.setOverview(!s.overview);
       } else if (e.code === 'KeyT' && !s.liteMode && !anyOpen) {
         s.setTrainOpen(true);
       } else if ((e.code === 'Enter' || e.code === 'Space') && !anyOpen && s.nearbyHub) {
@@ -47,7 +49,7 @@ export const App: React.FC = () => {
       {liteMode ? (
         <LiteMap />
       ) : (
-        <Canvas shadows dpr={[1, 1.5]} camera={{ position: [-6, 7.5, -15], fov: 50 }}>
+        <Canvas shadows dpr={[1, 1.5]} camera={{ position: [-6, 7.5, -15], fov: 50, far: 400 }}>
           <Suspense fallback={null}>
             <IsraelMapWorld />
             <CityHubs />

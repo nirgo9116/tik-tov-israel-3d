@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle } from 'lucide-react';
+import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon } from 'lucide-react';
 import { CITY_HUBS, START_CASH, useGameStore } from '../../store/gameStore';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
 
@@ -25,6 +25,8 @@ export const HUD: React.FC = () => {
   const setTrainOpen = useGameStore((s) => s.setTrainOpen);
   const setInfoOpen = useGameStore((s) => s.setInfoOpen);
   const setTutorialOpen = useGameStore((s) => s.setTutorialOpen);
+  const overview = useGameStore((s) => s.overview);
+  const setOverview = useGameStore((s) => s.setOverview);
   const setLiteMode = useGameStore((s) => s.setLiteMode);
   const advanceYear = useGameStore((s) => s.advanceYear);
   const clearToast = useGameStore((s) => s.clearToast);
@@ -160,8 +162,14 @@ export const HUD: React.FC = () => {
       <div className="bottom-right-actions">
         {!liteMode && (
           <div className="controls-hint">
-            <b>WASD / חיצים</b> הליכה • <b>Enter</b> כניסה לעיר • <b>T</b> רכבת • <b>P</b> התיק שלי
+            <b>WASD / חיצים</b> הליכה • <b>גלגלת או + / -</b> זום • <b>M</b> כל הארץ • <b>Enter</b> כניסה לעיר • <b>T</b> רכבת • <b>P</b> התיק שלי
           </div>
+        )}
+        {!liteMode && (
+          <button className="phone-fab map-fab" onClick={() => setOverview(!overview)}>
+            <MapIcon size={20} />
+            <span>{overview ? 'חזרה לשחקן (M)' : 'כל הארץ (M)'}</span>
+          </button>
         )}
         {!liteMode && (
           <button className="phone-fab train-fab" onClick={() => setTrainOpen(true)}>

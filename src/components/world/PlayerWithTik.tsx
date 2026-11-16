@@ -4,6 +4,10 @@ import * as THREE from 'three';
 import { CITY_HUBS, useGameStore } from '../../store/gameStore';
 
 const KEYS: Record<string, boolean> = {};
+/** Camera distance behind the player; changed with the mouse wheel or + / - keys. */
+let camZoom = 11.5;
+const ZOOM_MIN = 6;
+const ZOOM_MAX = 60;
 
 function clampWorld(val: number, min: number, max: number) {
   return Math.max(min, Math.min(max, val));
@@ -112,6 +116,7 @@ export const PlayerWithTik: React.FC = () => {
   const playerPos = useGameStore((s) => s.playerPos);
   const playerRot = useGameStore((s) => s.playerRot);
   const holdings = useGameStore((s) => s.holdings);
+  const overview = useGameStore((s) => s.overview);
   const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen));
   const getRubric = useGameStore((s) => s.getRubric);
   const setPlayerTransform = useGameStore((s) => s.setPlayerTransform);
@@ -135,10 +140,16 @@ export const PlayerWithTik: React.FC = () => {
     const onBlur = () => {
       for (const k of Object.keys(KEYS)) KEYS[k] = false;
     };
+    const onWheel = (e: WheelEvent) => {
+      if ((e.target as HTMLElement | null)?.tagName !== 'CANVAS') return;
+      camZoom = THREE.MathUtils.clamp(camZoom * (e.deltaY > 0 ? 1.12 : 0.89), ZOOM_MIN, ZOOM_MAX);
+    };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('wheel', onWheel, { passive: true });
     return () => {
+      window.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
@@ -184,9 +195,20 @@ export const PlayerWithTik: React.FC = () => {
     }
     setNearby(foundHub);
 
-    // Third-person camera that keeps the Tik on the player's back in view
-    const camDist = 11.5;
-    const target = new THREE.Vector3(nx - Math.sin(nextRot) * camDist, 7.0, nz - Math.cos(nextRot) * camDist);
+    if (KEYS['Equal'] || KEYS['NumpadAdd']) camZoom = Math.max(ZOOM_MIN, camZoom - 20 * dt);
+    if (KEYS['Minus'] || KEYS['NumpadSubtract']) camZoom = Math.min(ZOOM_MAX, camZoom + 20 * dt);
+
+    if (overview) {
+      // Bird's-eye view of the whole country, north at the top of the screen
+      camera.position.lerp(new THREE.Vector3(2, 130, -6.01), 1 - Math.exp(-4 * dt));
+      camera.lookAt(2, 0, -6);
+      camera.up.set(0, 0, -1);
+      return;
+    }
+    camera.up.set(0, 1, 0);
+    // Third-person camera that keeps the Tik on the player's back in view; height grows with zoom
+    const camHeight = 7.0 * (camZoom / 11.5) ** 0.9;
+    const target = new THREE.Vector3(nx - Math.sin(nextRot) * camZoom, camHeight, nz - Math.cos(nextRot) * camZoom);
     camera.position.lerp(target, 1 - Math.exp(-6 * dt));
     camera.lookAt(nx, 1.6, nz);
   });

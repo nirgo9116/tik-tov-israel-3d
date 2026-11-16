@@ -735,3 +735,4 @@ body { direction: rtl; }
 .tutorial-dots span.on { background: #0ea5e9; }
 .tutorial-nav { display: flex; justify-content: space-between; align-items: center; }
 .tutorial-nav .btn-invest { display: inline-flex; align-items: center; gap: 4px; }
+.map-fab { background: linear-gradient(135deg, #047857, #10b981) !important; }

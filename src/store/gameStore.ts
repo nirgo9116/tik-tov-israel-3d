@@ -269,6 +269,8 @@ interface GameState {
   trainOpen: boolean;
   infoOpen: boolean;
   tutorialOpen: boolean;
+  /** Bird's-eye view of the whole map. */
+  overview: boolean;
   tikTab: TikTab;
   toastMessage: string | null;
 
@@ -280,6 +282,7 @@ interface GameState {
   setTrainOpen: (open: boolean) => void;
   setInfoOpen: (open: boolean) => void;
   setTutorialOpen: (open: boolean) => void;
+  setOverview: (on: boolean) => void;
   setLiteMode: (on: boolean) => void;
   travelTo: (id: CityHubId) => void;
   clearToast: () => void;
@@ -315,6 +318,7 @@ const initialGame = () => ({
   trainOpen: false,
   infoOpen: false,
   tutorialOpen: !readTutorialSeen(),
+  overview: false,
   tikTab: 'bag' as TikTab,
   toastMessage: null as string | null,
 });
@@ -335,6 +339,7 @@ export const useGameStore = create<GameState>()(
   setTikTab: (tab) => set({ tikTab: tab }),
   setTrainOpen: (open) => set({ trainOpen: open, openHub: null, tikOpen: false }),
   setInfoOpen: (open) => set({ infoOpen: open }),
+  setOverview: (on) => set({ overview: on }),
   setTutorialOpen: (open) => {
     if (!open) writeTutorialSeen();
     set({ tutorialOpen: open });
