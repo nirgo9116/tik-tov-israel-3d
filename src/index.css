@@ -727,3 +727,11 @@ body { direction: rtl; }
 .lite-city strong { font-size: 14px; }
 .lite-dot { width: 10px; height: 10px; border-radius: 50%; }
 .lite-count { color: #fbbf24; font-weight: 700; }
+.tutorial-card { max-width: 620px; }
+.tutorial-list { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.6; margin: 8px 0 16px; }
+.tutorial-list li { background: #1e293b; border-radius: 10px; padding: 10px 14px; border-inline-start: 4px solid #0ea5e9; }
+.tutorial-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 14px; }
+.tutorial-dots span { width: 8px; height: 8px; border-radius: 50%; background: #334155; }
+.tutorial-dots span.on { background: #0ea5e9; }
+.tutorial-nav { display: flex; justify-content: space-between; align-items: center; }
+.tutorial-nav .btn-invest { display: inline-flex; align-items: center; gap: 4px; }

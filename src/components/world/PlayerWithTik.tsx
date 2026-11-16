@@ -112,7 +112,7 @@ export const PlayerWithTik: React.FC = () => {
   const playerPos = useGameStore((s) => s.playerPos);
   const playerRot = useGameStore((s) => s.playerRot);
   const holdings = useGameStore((s) => s.holdings);
-  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen));
+  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen));
   const getRubric = useGameStore((s) => s.getRubric);
   const setPlayerTransform = useGameStore((s) => s.setPlayerTransform);
   const setNearby = useGameStore((s) => s.setNearby);

@@ -8,6 +8,7 @@ import { HubModal } from './components/ui/HubModal';
 import { TikBagModal } from './components/ui/TikBagModal';
 import { TrainModal } from './components/ui/TrainModal';
 import { InfoModal } from './components/ui/InfoModal';
+import { TutorialModal } from './components/ui/TutorialModal';
 import { LiteMap } from './components/ui/LiteMap';
 import { useGameStore } from './store/gameStore';
 
@@ -19,7 +20,8 @@ export const App: React.FC = () => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const s = useGameStore.getState();
-      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen;
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen;
+      if (s.tutorialOpen) return;
 
       if (e.code === 'KeyP' || e.code === 'Tab') {
         e.preventDefault();
@@ -58,6 +60,7 @@ export const App: React.FC = () => {
       <TikBagModal />
       <TrainModal />
       <InfoModal />
+      <TutorialModal />
     </div>
   );
 };

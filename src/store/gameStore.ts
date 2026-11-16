@@ -208,6 +208,22 @@ function writeLitePref(on: boolean) {
   }
 }
 
+function readTutorialSeen(): boolean {
+  try {
+    return window.localStorage.getItem('tiktov-tutorial-seen') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeTutorialSeen() {
+  try {
+    window.localStorage.setItem('tiktov-tutorial-seen', '1');
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 function fmt(n: number) {
   return `₪${Math.round(n).toLocaleString('he-IL')}`;
 }
@@ -252,6 +268,7 @@ interface GameState {
   tikOpen: boolean;
   trainOpen: boolean;
   infoOpen: boolean;
+  tutorialOpen: boolean;
   tikTab: TikTab;
   toastMessage: string | null;
 
@@ -262,6 +279,7 @@ interface GameState {
   setTikTab: (tab: TikTab) => void;
   setTrainOpen: (open: boolean) => void;
   setInfoOpen: (open: boolean) => void;
+  setTutorialOpen: (open: boolean) => void;
   setLiteMode: (on: boolean) => void;
   travelTo: (id: CityHubId) => void;
   clearToast: () => void;
@@ -296,6 +314,7 @@ const initialGame = () => ({
   tikOpen: false,
   trainOpen: false,
   infoOpen: false,
+  tutorialOpen: !readTutorialSeen(),
   tikTab: 'bag' as TikTab,
   toastMessage: null as string | null,
 });
@@ -316,6 +335,10 @@ export const useGameStore = create<GameState>()(
   setTikTab: (tab) => set({ tikTab: tab }),
   setTrainOpen: (open) => set({ trainOpen: open, openHub: null, tikOpen: false }),
   setInfoOpen: (open) => set({ infoOpen: open }),
+  setTutorialOpen: (open) => {
+    if (!open) writeTutorialSeen();
+    set({ tutorialOpen: open });
+  },
   setLiteMode: (on) => {
     writeLitePref(on);
     set({ liteMode: on });

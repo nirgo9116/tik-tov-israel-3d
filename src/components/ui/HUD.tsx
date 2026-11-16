@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box } from 'lucide-react';
+import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle } from 'lucide-react';
 import { CITY_HUBS, START_CASH, useGameStore } from '../../store/gameStore';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
 
@@ -24,6 +24,7 @@ export const HUD: React.FC = () => {
   const setOpenHub = useGameStore((s) => s.setOpenHub);
   const setTrainOpen = useGameStore((s) => s.setTrainOpen);
   const setInfoOpen = useGameStore((s) => s.setInfoOpen);
+  const setTutorialOpen = useGameStore((s) => s.setTutorialOpen);
   const setLiteMode = useGameStore((s) => s.setLiteMode);
   const advanceYear = useGameStore((s) => s.advanceYear);
   const clearToast = useGameStore((s) => s.clearToast);
@@ -76,6 +77,9 @@ export const HUD: React.FC = () => {
         </div>
 
         <div className="meters-group">
+          <button className="btn-mini" onClick={() => setTutorialOpen(true)} title="מדריך לשחקנים">
+            <HelpCircle size={14} /> איך משחקים?
+          </button>
           <button className="btn-mini" onClick={() => setInfoOpen(true)} title="למורה: מקורות, פרטיות ותוכנית הלימודים">
             <Info size={14} /> למורה
           </button>
