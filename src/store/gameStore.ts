@@ -189,7 +189,70 @@ const INITIAL_MISSIONS: Mission[] = [
     description: 'כתבו "מה למדתי" על שתי החלטות לפחות, אחרי שהשנה שלהן הסתיימה.',
     completed: false,
   },
+  {
+    id: 'm5',
+    title: 'חוסכים מהמשכורת',
+    regionHint: 'עבודה בקיץ',
+    description: 'עבדו בקיץ, וחסכו לפחות חצי מהמשכורת בתיק.',
+    completed: false,
+  },
 ];
+
+export interface Job {
+  id: string;
+  city: CityHubId;
+  title: string;
+  description: string;
+  task: string;
+  pay: number;
+  /** Where the player walks to during the job, in world coordinates [x, z]. */
+  targets: Array<[number, number]>;
+}
+
+/** One summer job per year. Pay is an illustrative figure for a teen's summer job. */
+export const JOBS: Job[] = [
+  {
+    id: 'job-icecream',
+    city: 'telaviv',
+    title: 'משלוחים מהגלידרייה בטיילת',
+    description: 'עבודת קיץ בגלידרייה ליד חוף תל אביב.',
+    task: 'הביאו 3 משלוחים לנקודות על הטיילת',
+    pay: 3000,
+    targets: [[-20, -16], [-21, 6], [-12, 10]],
+  },
+  {
+    id: 'job-camp',
+    city: 'jerusalem',
+    title: 'מדריך/ה בקייטנה',
+    description: 'הדרכה בקייטנת קיץ בירושלים.',
+    task: 'אספו את 3 קבוצות הילדים מהנקודות המסומנות',
+    pay: 3200,
+    targets: [[6, 12], [20, -6], [3, -8]],
+  },
+  {
+    id: 'job-flyers',
+    city: 'haifa',
+    title: 'חלוקת עלונים בשכונה',
+    description: 'חלוקת עלונים לעסק שכונתי בחיפה.',
+    task: 'חלקו עלונים ב-3 רחובות',
+    pay: 2600,
+    targets: [[-16, -24], [0, -30], [-2, -40]],
+  },
+  {
+    id: 'job-tutor',
+    city: 'beersheva',
+    title: 'שיעורים פרטיים במתמטיקה',
+    description: 'עזרה לתלמידי חטיבת ביניים בבאר שבע.',
+    task: 'לכו ל-3 תלמידים ותנו שיעור',
+    pay: 3400,
+    targets: [[-14, 26], [6, 22], [-12, 40]],
+  },
+];
+
+export interface ActiveJob {
+  jobId: string;
+  done: number;
+}
 
 function readLitePref(): boolean {
   try {
@@ -255,6 +318,8 @@ function checkMissions(missions: Mission[], holdings: Holding[], journal: Journa
     if (m.id === 'm2' && kinds >= 3) return { ...m, completed: true };
     if (m.id === 'm3' && longIndex) return { ...m, completed: true };
     if (m.id === 'm4' && reflections >= 2) return { ...m, completed: true };
+    if (m.id === 'm5' && journal.some((j) => j.category === 'עבודה' && j.amount >= 0.5 * (j.payTotal ?? Infinity)))
+      return { ...m, completed: true };
     return m;
   });
 }
@@ -274,6 +339,11 @@ interface GameState {
   currentEvent: YearEvent | null;
   eventHistory: YearEvent[];
   activeYears: number[];
+  activeJob: ActiveJob | null;
+  /** Year in which the last summer job was finished (one job per year). */
+  jobYear: number | null;
+  /** A finished job waiting for the budget decision. */
+  paycheck: { jobId: string; pay: number } | null;
 
   playerPos: [number, number, number];
   playerRot: number;
@@ -310,6 +380,11 @@ interface GameState {
   sellHolding: (holdingId: string, thoughtBefore: string) => boolean;
   addReflection: (entryId: string, text: string) => void;
   advanceYear: () => void;
+  startJob: (jobId: string) => void;
+  cancelJob: () => void;
+  reachJobTarget: () => void;
+  finishJobNow: (jobId: string) => void;
+  cashPaycheck: (saved: number, note: string) => void;
   resetGame: () => void;
 
   isGameOver: () => boolean;
@@ -329,6 +404,9 @@ const initialGame = () => ({
   currentEvent: null as YearEvent | null,
   eventHistory: [] as YearEvent[],
   activeYears: [] as number[],
+  activeJob: null as ActiveJob | null,
+  jobYear: null as number | null,
+  paycheck: null as { jobId: string; pay: number } | null,
   playerPos: [-6, 0, -4] as [number, number, number],
   playerRot: 0,
   nearbyHub: null as CityHubId | null,
@@ -533,6 +611,58 @@ export const useGameStore = create<GameState>()(
     });
   },
 
+  startJob: (jobId) => {
+    const s = get();
+    if (s.isGameOver() || s.activeJob || s.jobYear === s.year) return;
+    const job = JOBS.find((j) => j.id === jobId)!;
+    set({ activeJob: { jobId, done: 0 }, openHub: null, toastMessage: `התחלתם לעבוד: ${job.task}. הנקודות מסומנות בעמודי אור.` });
+  },
+  cancelJob: () => set({ activeJob: null, toastMessage: 'עזבתם את העבודה. אפשר לחזור אליה מאוחר יותר השנה.' }),
+  reachJobTarget: () => {
+    const s = get();
+    if (!s.activeJob) return;
+    const job = JOBS.find((j) => j.id === s.activeJob!.jobId)!;
+    const done = s.activeJob.done + 1;
+    if (done >= job.targets.length) {
+      set({ activeJob: null, jobYear: s.year, paycheck: { jobId: job.id, pay: job.pay } });
+    } else {
+      set({ activeJob: { ...s.activeJob, done }, toastMessage: `כל הכבוד! ${done} מתוך ${job.targets.length}` });
+    }
+  },
+  finishJobNow: (jobId) => {
+    const s = get();
+    if (s.isGameOver() || s.jobYear === s.year) return;
+    const job = JOBS.find((j) => j.id === jobId)!;
+    set({ activeJob: null, jobYear: s.year, paycheck: { jobId, pay: job.pay }, openHub: null });
+  },
+  cashPaycheck: (saved, note) => {
+    const s = get();
+    if (!s.paycheck) return;
+    const job = JOBS.find((j) => j.id === s.paycheck!.jobId)!;
+    const pay = s.paycheck.pay;
+    const keep = Math.max(0, Math.min(pay, Math.round(saved)));
+    const entry: JournalEntry = {
+      id: `j-${Date.now()}`,
+      year: s.year,
+      actionTitle: `עבדתי (${job.title}) והרווחתי ${fmt(pay)}. חסכתי ${fmt(keep)} והוצאתי ${fmt(pay - keep)}.`,
+      region: CITY_HUBS.find((h) => h.id === job.city)!.hebrewName,
+      category: 'עבודה',
+      amount: keep,
+      payTotal: pay,
+      thoughtBefore: note.trim(),
+      learnedAfter: '',
+    };
+    const journal = [entry, ...s.journal];
+    set({
+      cash: s.cash + keep,
+      paycheck: null,
+      journal,
+      missions: checkMissions(s.missions, s.holdings, journal, s.year),
+      activeYears: s.activeYears.includes(s.year) ? s.activeYears : [...s.activeYears, s.year],
+      toastMessage: `${fmt(keep)} נכנסו לכסף הפנוי בתיק.`,
+    });
+  },
+
   resetGame: () => set({ ...initialGame() }),
 
   isGameOver: () => get().year > LAST_YEAR,
@@ -611,6 +741,9 @@ export const useGameStore = create<GameState>()(
         currentEvent: s.currentEvent,
         eventHistory: s.eventHistory,
         activeYears: s.activeYears,
+        activeJob: s.activeJob,
+        jobYear: s.jobYear,
+        paycheck: s.paycheck,
       }),
     }
   )

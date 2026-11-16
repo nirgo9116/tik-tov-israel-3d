@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CITY_HUBS, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, JOBS, useGameStore } from '../../store/gameStore';
 
 const KEYS: Record<string, boolean> = {};
 /** Camera distance behind the player; changed with the mouse wheel or + / - keys. */
@@ -117,10 +117,12 @@ export const PlayerWithTik: React.FC = () => {
   const playerRot = useGameStore((s) => s.playerRot);
   const holdings = useGameStore((s) => s.holdings);
   const overview = useGameStore((s) => s.overview);
-  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen));
+  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck));
   const getRubric = useGameStore((s) => s.getRubric);
   const setPlayerTransform = useGameStore((s) => s.setPlayerTransform);
   const setNearby = useGameStore((s) => s.setNearby);
+  const activeJob = useGameStore((s) => s.activeJob);
+  const reachJobTarget = useGameStore((s) => s.reachJobTarget);
 
   const rubric = getRubric();
   const hasBank = holdings.some((h) => h.category === 'bank');
@@ -195,6 +197,12 @@ export const PlayerWithTik: React.FC = () => {
     }
     setNearby(foundHub);
 
+    if (activeJob && !paused) {
+      const job = JOBS.find((j) => j.id === activeJob.jobId);
+      const target = job?.targets[activeJob.done];
+      if (target && Math.hypot(nx - target[0], nz - target[1]) < 2.4) reachJobTarget();
+    }
+
     if (KEYS['Equal'] || KEYS['NumpadAdd']) camZoom = Math.max(ZOOM_MIN, camZoom - 20 * dt);
     if (KEYS['Minus'] || KEYS['NumpadSubtract']) camZoom = Math.min(ZOOM_MAX, camZoom + 20 * dt);
 
@@ -248,6 +256,21 @@ export const PlayerWithTik: React.FC = () => {
         <sphereGeometry args={[0.32, 16, 16]} />
         <meshStandardMaterial color="#fed7aa" />
       </mesh>
+      {/* Arms; during a summer job the player carries a package */}
+      <mesh position={[-0.46, 1.4, activeJob ? 0.25 : 0]} rotation={[activeJob ? -1.1 : 0, 0, 0]} castShadow>
+        <boxGeometry args={[0.18, 0.75, 0.2]} />
+        <meshStandardMaterial color="#f8fafc" />
+      </mesh>
+      <mesh position={[0.46, 1.4, activeJob ? 0.25 : 0]} rotation={[activeJob ? -1.1 : 0, 0, 0]} castShadow>
+        <boxGeometry args={[0.18, 0.75, 0.2]} />
+        <meshStandardMaterial color="#f8fafc" />
+      </mesh>
+      {activeJob && (
+        <mesh position={[0, 1.35, 0.6]} castShadow>
+          <boxGeometry args={[0.7, 0.45, 0.5]} />
+          <meshStandardMaterial color="#c08a4a" roughness={0.9} />
+        </mesh>
+      )}
     </group>
   );
 };

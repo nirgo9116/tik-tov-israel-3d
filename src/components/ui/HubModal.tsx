@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Users, AlertTriangle, CheckCircle2, MapPin, FlaskConical } from 'lucide-react';
-import { CITY_HUBS, HUB_PRODUCTS, MIN_REASONING_CHARS, useGameStore } from '../../store/gameStore';
+import { X, Users, AlertTriangle, CheckCircle2, MapPin, FlaskConical, Briefcase } from 'lucide-react';
+import { CITY_HUBS, HUB_PRODUCTS, JOBS, MIN_REASONING_CHARS, useGameStore } from '../../store/gameStore';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 const riskClass: Record<string, string> = { נמוך: 'low', בינוני: 'medium', גבוה: 'high' };
@@ -14,6 +14,11 @@ export const HubModal: React.FC = () => {
   const investAction = useGameStore((s) => s.investAction);
   const sellHolding = useGameStore((s) => s.sellHolding);
   const isGameOver = useGameStore((s) => s.isGameOver);
+  const activeJob = useGameStore((s) => s.activeJob);
+  const jobYear = useGameStore((s) => s.jobYear);
+  const liteMode = useGameStore((s) => s.liteMode);
+  const startJob = useGameStore((s) => s.startJob);
+  const finishJobNow = useGameStore((s) => s.finishJobNow);
 
   const [thought, setThought] = useState('');
   const [amounts, setAmounts] = useState<Record<string, number>>({});
@@ -116,6 +121,36 @@ export const HubModal: React.FC = () => {
             );
           })}
         </div>
+
+        {JOBS.filter((j) => j.city === openHub).map((job) => {
+          const workedThisYear = jobYear === year;
+          const busy = Boolean(activeJob);
+          return (
+            <div key={job.id} className="job-card">
+              <div className="job-top">
+                <Briefcase size={16} />
+                <strong>עבודה בקיץ: {job.title}</strong>
+                <span className="job-pay">{shekel(job.pay)}</span>
+              </div>
+              <p>
+                {job.description} {liteMode ? '' : `המשימה: ${job.task}.`} אפשר לעבוד פעם אחת בכל שנה.
+              </p>
+              <button
+                className="btn-invest"
+                disabled={over || workedThisYear || busy}
+                onClick={() => (liteMode ? finishJobNow(job.id) : startJob(job.id))}
+              >
+                {workedThisYear
+                  ? `כבר עבדתם ב-${year}`
+                  : busy
+                  ? 'אתם כבר באמצע עבודה'
+                  : liteMode
+                  ? 'לעבוד בקיץ'
+                  : 'לקחת את העבודה'}
+              </button>
+            </div>
+          );
+        })}
 
         {relevant.length > 0 && (
           <div className="active-positions">

@@ -42,6 +42,8 @@ export interface JournalEntry {
   region: string;
   category: string;
   amount: number;
+  /** For work entries: the full pay before the spend/save split. */
+  payTotal?: number;
   /** What the student wrote before deciding (required, at least MIN_REASONING_CHARS). */
   thoughtBefore: string;
   /** The student's own reflection after the year ended. Empty until written. */

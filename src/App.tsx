@@ -4,6 +4,8 @@ import { EffectComposer, Bloom, N8AO, Vignette, SMAA } from '@react-three/postpr
 import { IsraelMapWorld } from './components/world/IsraelMapWorld';
 import { CityHubs } from './components/world/CityHubs';
 import { PlayerWithTik } from './components/world/PlayerWithTik';
+import { JobMarkers } from './components/world/JobMarkers';
+import { PaycheckModal } from './components/ui/PaycheckModal';
 import { HUD } from './components/ui/HUD';
 import { HubModal } from './components/ui/HubModal';
 import { TikBagModal } from './components/ui/TikBagModal';
@@ -22,8 +24,8 @@ export const App: React.FC = () => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const s = useGameStore.getState();
-      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen;
-      if (s.tutorialOpen) return;
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck;
+      if (s.tutorialOpen || s.paycheck) return;
 
       if (e.code === 'KeyP' || e.code === 'Tab') {
         e.preventDefault();
@@ -61,6 +63,7 @@ export const App: React.FC = () => {
             <IsraelMapWorld />
             <CityHubs />
             <PlayerWithTik />
+            <JobMarkers />
           </Suspense>
           {highGraphics && (
             <EffectComposer multisampling={0}>
@@ -78,6 +81,7 @@ export const App: React.FC = () => {
       <TrainModal />
       <InfoModal />
       <TutorialModal />
+      <PaycheckModal />
     </div>
   );
 };

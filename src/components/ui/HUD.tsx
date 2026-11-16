@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles } from 'lucide-react';
-import { CITY_HUBS, START_CASH, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, JOBS, START_CASH, useGameStore } from '../../store/gameStore';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
@@ -31,6 +31,8 @@ export const HUD: React.FC = () => {
   const highGraphics = useGameStore((s) => s.highGraphics);
   const setHighGraphics = useGameStore((s) => s.setHighGraphics);
   const advanceYear = useGameStore((s) => s.advanceYear);
+  const activeJob = useGameStore((s) => s.activeJob);
+  const cancelJob = useGameStore((s) => s.cancelJob);
   const clearToast = useGameStore((s) => s.clearToast);
 
   const netWorth = getNetWorth();
@@ -128,6 +130,20 @@ export const HUD: React.FC = () => {
       </div>
 
       {toastMessage && <div className="toast-pill">{toastMessage}</div>}
+
+      {activeJob && (() => {
+        const job = JOBS.find((j) => j.id === activeJob.jobId)!;
+        return (
+          <div className="job-pill">
+            <span>
+              🧺 <b>{job.title}</b>: {job.task} ({activeJob.done}/{job.targets.length}). לכו לעמוד האור הצהוב. לחצו M כדי לראות איפה הוא.
+            </span>
+            <button className="btn-mini" onClick={cancelJob}>
+              עזיבה
+            </button>
+          </div>
+        );
+      })()}
 
       {!liteMode && (
         <div className="interaction-prompts">
