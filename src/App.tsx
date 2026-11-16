@@ -8,6 +8,9 @@ import { JobMarkers, JobStands, NavArrow } from './components/world/JobMarkers';
 import { JobsModal } from './components/ui/JobsModal';
 import { Railway, Train, Traffic } from './components/world/Transport';
 import { TrainRideBanner } from './components/ui/TrainRideBanner';
+import { InteriorScene } from './components/world/InteriorScene';
+import { StationInfoModal } from './components/ui/StationInfoModal';
+import { runStation } from './components/ui/stations';
 import { PaycheckModal } from './components/ui/PaycheckModal';
 import { HUD } from './components/ui/HUD';
 import { HubModal } from './components/ui/HubModal';
@@ -21,13 +24,14 @@ import { useGameStore } from './store/gameStore';
 export const App: React.FC = () => {
   const liteMode = useGameStore((s) => s.liteMode);
   const highGraphics = useGameStore((s) => s.highGraphics);
+  const interior = useGameStore((s) => s.interior);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const s = useGameStore.getState();
-      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide;
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo;
       if (s.tutorialOpen || s.paycheck || s.trainRide) return;
 
       if (e.code === 'KeyP' || e.code === 'Tab') {
@@ -39,6 +43,17 @@ export const App: React.FC = () => {
         if (s.trainOpen) s.setTrainOpen(false);
         if (s.infoOpen) s.setInfoOpen(false);
         if (s.jobsOpen) s.setJobsOpen(false);
+        if (s.stationInfo) s.setStationInfo(null);
+        if (!anyOpen && s.interior) s.exitBuilding();
+      } else if (s.interior) {
+        // Inside a building: E / Enter / Space uses the station you stand on
+        if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') && !anyOpen && s.nearbyStation) {
+          e.preventDefault();
+          runStation(s.interior, s.nearbyStation);
+        } else if (e.code === 'KeyP' || e.code === 'Tab') {
+          e.preventDefault();
+          s.setTikOpen(!s.tikOpen);
+        }
       } else if (e.code === 'KeyJ' && !anyOpen) {
         s.setJobsOpen(true);
       } else if ((e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') && !anyOpen && s.nearbyJob && !s.activeJob && s.jobYear !== s.year) {
@@ -50,7 +65,8 @@ export const App: React.FC = () => {
         s.setTrainOpen(true);
       } else if ((e.code === 'Enter' || e.code === 'Space') && !anyOpen && s.nearbyHub) {
         e.preventDefault();
-        s.setOpenHub(s.nearbyHub);
+        if (s.liteMode) s.setOpenHub(s.nearbyHub);
+        else s.enterBuilding(s.nearbyHub);
       }
     };
     window.addEventListener('keydown', handleKey);
@@ -69,6 +85,13 @@ export const App: React.FC = () => {
           camera={{ position: [-6, 7.5, -15], fov: 50, far: 6000 }}
         >
           <Suspense fallback={null}>
+            {interior ? (
+              <>
+                <InteriorScene id={interior} />
+                <PlayerWithTik />
+              </>
+            ) : (
+            <>
             <IsraelMapWorld />
             <CityHubs />
             <PlayerWithTik />
@@ -78,6 +101,8 @@ export const App: React.FC = () => {
             <Railway />
             <Train />
             <Traffic />
+            </>
+            )}
           </Suspense>
           {highGraphics && (
             <EffectComposer multisampling={0}>
@@ -98,6 +123,7 @@ export const App: React.FC = () => {
       <PaycheckModal />
       <JobsModal />
       <TrainRideBanner />
+      <StationInfoModal />
     </div>
   );
 };

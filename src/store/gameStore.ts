@@ -376,6 +376,11 @@ interface GameState {
   jobsOpen: boolean;
   /** A train ride in progress (3D mode): the track to follow, and a job to start on arrival. */
   trainRide: { to: CityHubId; path: Array<[number, number]>; thenJob?: string } | null;
+  /** The building the player is inside (3D mode), or null when outside. */
+  interior: CityHubId | null;
+  nearbyStation: string | null;
+  /** An info station whose panel is open. */
+  stationInfo: string | null;
 
   liteMode: boolean;
   /** Extra visual effects for strong computers. */
@@ -396,6 +401,10 @@ interface GameState {
   setJobsOpen: (open: boolean) => void;
   startTrainRide: (to: CityHubId, thenJob?: string) => void;
   finishTrainRide: () => void;
+  enterBuilding: (id: CityHubId) => void;
+  exitBuilding: () => void;
+  setNearbyStation: (id: string | null) => void;
+  setStationInfo: (id: string | null) => void;
   setOpenHub: (id: CityHubId | null) => void;
   setTikOpen: (open: boolean, tab?: TikTab) => void;
   setTikTab: (tab: TikTab) => void;
@@ -445,6 +454,9 @@ const initialGame = () => ({
   nearbyJob: null as string | null,
   jobsOpen: false,
   trainRide: null as { to: CityHubId; path: Array<[number, number]>; thenJob?: string } | null,
+  interior: null as CityHubId | null,
+  nearbyStation: null as string | null,
+  stationInfo: null as string | null,
   openHub: null as CityHubId | null,
   tikOpen: false,
   trainOpen: false,
@@ -482,6 +494,23 @@ export const useGameStore = create<GameState>()(
     }
     set({ trainRide: { to, path: railPath(from, to), thenJob }, trainOpen: false, jobsOpen: false, overview: false });
   },
+  enterBuilding: (id) => {
+    const hub = CITY_HUBS.find((h) => h.id === id)!;
+    set({ interior: id, playerPos: [0, 0, 3.4], playerRot: Math.PI, overview: false, openHub: null, nearbyHub: null, nearbyJob: null, toastMessage: `נכנסתם: ${hub.hubTitle}` });
+  },
+  exitBuilding: () => {
+    const id = get().interior;
+    if (!id) return;
+    const hub = CITY_HUBS.find((h) => h.id === id)!;
+    const [ex, , ez] = hub.entryPos;
+    const [cx, , cz] = hub.position;
+    // Stand on the entry pad, facing away from the building
+    set({ interior: null, nearbyStation: null, stationInfo: null, openHub: null, playerPos: [ex, 0, ez], playerRot: Math.atan2(ex - cx, ez - cz) });
+  },
+  setNearbyStation: (id) => {
+    if (get().nearbyStation !== id) set({ nearbyStation: id });
+  },
+  setStationInfo: (id) => set({ stationInfo: id }),
   finishTrainRide: () => {
     const ride = get().trainRide;
     if (!ride) return;

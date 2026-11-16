@@ -8,7 +8,7 @@ import { Landmark, LANDMARK_SIGN_HEIGHT } from './Landmarks';
 
 export const CityHubs: React.FC = () => {
   const nearbyHub = useGameStore((s) => s.nearbyHub);
-  const setOpenHub = useGameStore((s) => s.setOpenHub);
+  const enterBuilding = useGameStore((s) => s.enterBuilding);
   const ringRefs = useRef<(THREE.Mesh | null)[]>([]);
 
   useFrame(({ clock }) => {
@@ -35,7 +35,7 @@ export const CityHubs: React.FC = () => {
               position={[bx, 0, bz]}
               onClick={(e) => {
                 e.stopPropagation();
-                setOpenHub(hub.id);
+                enterBuilding(hub.id);
               }}
             >
               <Landmark id={hub.id} />
@@ -71,7 +71,7 @@ export const CityHubs: React.FC = () => {
               position={[ex, 0.06, ez]}
               onClick={(e) => {
                 e.stopPropagation();
-                setOpenHub(hub.id);
+                enterBuilding(hub.id);
               }}
             >
               <mesh rotation={[-Math.PI / 2, 0, 0]}>

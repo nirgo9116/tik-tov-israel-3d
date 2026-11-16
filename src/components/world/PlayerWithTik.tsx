@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { CITY_HUBS, JOBS, useGameStore } from '../../store/gameStore';
 import { HANDOVER_SECONDS, jobFx } from './jobFx';
+import { INTERIORS, ROOM_HALF_D, ROOM_HALF_W } from '../../data/interiors';
 
 const KEYS: Record<string, boolean> = {};
 /** Camera distance behind the player; changed with the mouse wheel or + / - keys. */
@@ -121,7 +122,9 @@ export const PlayerWithTik: React.FC = () => {
   const playerRot = useGameStore((s) => s.playerRot);
   const holdings = useGameStore((s) => s.holdings);
   const overview = useGameStore((s) => s.overview);
-  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen));
+  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.stationInfo));
+  const interior = useGameStore((s) => s.interior);
+  const setNearbyStation = useGameStore((s) => s.setNearbyStation);
   const getRubric = useGameStore((s) => s.getRubric);
   const setPlayerTransform = useGameStore((s) => s.setPlayerTransform);
   const setNearby = useGameStore((s) => s.setNearby);
@@ -179,12 +182,20 @@ export const PlayerWithTik: React.FC = () => {
     let nextRot = playerRot;
 
     if (!paused && !handingOver) {
-      const walkSpeed = 12;
+      const walkSpeed = interior ? 6 : 12;
       nextRot = playerRot + turn * 3.2 * dt;
       if (forward !== 0) {
-        const candX = clampWorld(nx + Math.sin(nextRot) * forward * walkSpeed * dt, -22, 26);
-        const candZ = clampWorld(nz + Math.cos(nextRot) * forward * walkSpeed * dt, -42, 42);
-        if (!collidesWithHub(candX, candZ, 0.85)) {
+        const m = 0.6;
+        const candX = interior
+          ? clampWorld(nx + Math.sin(nextRot) * forward * walkSpeed * dt, -ROOM_HALF_W + m, ROOM_HALF_W - m)
+          : clampWorld(nx + Math.sin(nextRot) * forward * walkSpeed * dt, -22, 26);
+        const candZ = interior
+          ? clampWorld(nz + Math.cos(nextRot) * forward * walkSpeed * dt, -ROOM_HALF_D + m, ROOM_HALF_D - m)
+          : clampWorld(nz + Math.cos(nextRot) * forward * walkSpeed * dt, -42, 42);
+        const blocked = interior
+          ? INTERIORS[interior].blockers.some(([bx, bz, bw, bd]) => Math.abs(candX - bx) < bw / 2 + 0.45 && Math.abs(candZ - bz) < bd / 2 + 0.45)
+          : collidesWithHub(candX, candZ, 0.85);
+        if (!blocked) {
           nx = candX;
           nz = candZ;
         }
@@ -222,6 +233,19 @@ export const PlayerWithTik: React.FC = () => {
       // Hand-over finished: count the stop
       jobFx.busyUntil = 0;
       reachJobTarget();
+    }
+
+    if (interior) {
+      let st: string | null = null;
+      for (const station of INTERIORS[interior].stations) {
+        if (Math.hypot(nx - station.pos[0], nz - station.pos[1]) < 1.3) st = station.id;
+      }
+      setNearbyStation(st);
+      camera.up.set(0, 1, 0);
+      // Cut-away view from the open front of the room (like a doll's house)
+      camera.position.lerp(new THREE.Vector3(nx * 0.5, 8.5, ROOM_HALF_D + 10 + nz * 0.2), 1 - Math.exp(-4 * dt));
+      camera.lookAt(nx * 0.7, 1.4, nz * 0.6 - 2);
+      return;
     }
 
     let foundHub = null;

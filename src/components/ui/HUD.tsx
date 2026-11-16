@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles, Briefcase } from 'lucide-react';
 import { CITY_HUBS, JOBS, START_CASH, useGameStore } from '../../store/gameStore';
+import { INTERIORS } from '../../data/interiors';
+import { runStation } from './stations';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
@@ -37,6 +39,11 @@ export const HUD: React.FC = () => {
   const jobYear = useGameStore((s) => s.jobYear);
   const startJob = useGameStore((s) => s.startJob);
   const setJobsOpen = useGameStore((s) => s.setJobsOpen);
+  const interior = useGameStore((s) => s.interior);
+  const nearbyStation = useGameStore((s) => s.nearbyStation);
+  const exitBuilding = useGameStore((s) => s.exitBuilding);
+  const enterBuilding = useGameStore((s) => s.enterBuilding);
+  const station = interior ? INTERIORS[interior].stations.find((x) => x.id === nearbyStation) : undefined;
   const standJob = JOBS.find((j) => j.id === nearbyJob);
   const canWork = !activeJob && jobYear !== year;
   const clearToast = useGameStore((s) => s.clearToast);
@@ -154,7 +161,22 @@ export const HUD: React.FC = () => {
         );
       })()}
 
-      {!liteMode && (
+      {!liteMode && interior && (
+        <div className="interaction-prompts">
+          {station ? (
+            <button className="prompt-btn prompt-landmark" onClick={() => runStation(interior, station.id)}>
+              <MapPin size={18} />
+              <span>
+                <strong>{station.label}</strong> — מקש <b>E</b>
+              </span>
+            </button>
+          ) : (
+            <div className="prompt-btn">{INTERIORS[interior].title}: לכו לאחת העמדות המסומנות על הרצפה</div>
+          )}
+        </div>
+      )}
+
+      {!liteMode && !interior && (
         <div className="interaction-prompts">
           {standJob && canWork && (
             <button className="prompt-btn prompt-job" onClick={() => startJob(standJob.id)}>
@@ -168,17 +190,17 @@ export const HUD: React.FC = () => {
             <div className="prompt-btn">כבר עבדתם השנה. אפשר לעבוד שוב אחרי שהמורה יעביר שנה.</div>
           )}
           {activeHub && !standJob && (
-            <button className="prompt-btn prompt-landmark" onClick={() => setOpenHub(activeHub.id)}>
+            <button className="prompt-btn prompt-landmark" onClick={() => enterBuilding(activeHub.id)}>
               <MapPin size={18} />
               <span>
-                כניסה ל<strong>{activeHub.hebrewName}</strong> ({activeHub.hubTitle}) — מקש <b>Enter</b>
+                כניסה לבניין: <strong>{activeHub.hubTitle}</strong> ({activeHub.hebrewName}) — מקש <b>Enter</b>
               </span>
             </button>
           )}
         </div>
       )}
 
-      {!liteMode && (
+      {!liteMode && !interior && (
         <div className="minimap-card">
           <div className="minimap-title">מפת ישראל (צפון ▲){activeJob ? " · צהוב: העצירה הבאה" : canWork ? " · ירוק: עבודה" : ""}</div>
           <div className="minimap-box israel-radar">
@@ -219,27 +241,40 @@ export const HUD: React.FC = () => {
       )}
 
       <div className="bottom-right-actions">
-        {!liteMode && (
+        {!liteMode && interior && (
+          <div className="controls-hint">
+            <b>WASD / חיצים</b> הליכה • <b>E</b> שימוש בעמדה • <b>Esc</b> יציאה מהבניין • <b>P</b> התיק שלי
+          </div>
+        )}
+        {!liteMode && interior && (
+          <button className="phone-fab exit-fab" onClick={exitBuilding}>
+            <MapPin size={20} />
+            <span>יציאה מהבניין (Esc)</span>
+          </button>
+        )}
+        {!liteMode && !interior && (
           <div className="controls-hint">
             <b>WASD / חיצים</b> הליכה • <b>גלגלת או + / -</b> זום • <b>M</b> כל הארץ • <b>Enter</b> כניסה לעיר • <b>E</b> עבודה • <b>T</b> רכבת • <b>P</b> התיק שלי
           </div>
         )}
-        {!liteMode && (
+        {!liteMode && !interior && (
           <button className="phone-fab map-fab" onClick={() => setOverview(!overview)}>
             <MapIcon size={20} />
             <span>{overview ? 'חזרה לשחקן (M)' : 'כל הארץ (M)'}</span>
           </button>
         )}
-        {!liteMode && (
+        {!liteMode && !interior && (
           <button className="phone-fab train-fab" onClick={() => setTrainOpen(true)}>
             <TrainFront size={20} />
             <span>רכבת ישראל (T)</span>
           </button>
         )}
+        {!interior && (
         <button className={`phone-fab job-fab${canWork ? ' pulse' : ''}`} onClick={() => setJobsOpen(true)}>
           <Briefcase size={20} />
           <span>עבודה בקיץ (J)</span>
         </button>
+        )}
         <button className="phone-fab" onClick={() => setTikOpen(true)}>
           <Backpack size={20} />
           <span>התיק שלי (P)</span>

@@ -777,3 +777,19 @@ body { direction: rtl; }
 .minimap-target, .minimap-stand { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; }
 .minimap-target { width: 10px; height: 10px; background: #facc15; box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.45); animation: jobPulse 1.2s infinite; }
 .minimap-stand { width: 7px; height: 7px; background: #22c55e; border: 1px solid #052e16; }
+.station-card { max-width: 620px; }
+.station-p { font-size: 14px; line-height: 1.6; margin: 6px 0; }
+.station-chart { background: #0f172a; border-radius: 12px; padding: 12px; margin-top: 10px; }
+.station-chart-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.station-bars { display: flex; gap: 6px; align-items: stretch; height: 170px; }
+.station-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; font-size: 11px; }
+.station-bar-area { flex: 1; width: 100%; position: relative; border-bottom: 0; }
+.station-bar-area::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid #475569; }
+.station-bar { position: absolute; left: 20%; right: 20%; border-radius: 3px; }
+.station-bar.up { bottom: 50%; background: #22c55e; }
+.station-bar.down { top: 50%; background: #ef4444; }
+.station-val { font-weight: 700; }
+.station-year { color: #94a3b8; }
+.station-src { font-size: 11px; color: #94a3b8; margin: 8px 0 0; }
+.station-q { font-size: 13px; color: #fde68a; margin-top: 10px; }
+.exit-fab { background: linear-gradient(135deg, #475569, #334155) !important; }
