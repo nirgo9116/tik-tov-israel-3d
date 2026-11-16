@@ -1,162 +1,35 @@
 import React, { useState } from 'react';
-import { X, Users, AlertTriangle, CheckCircle2, MapPin } from 'lucide-react';
-import { CITY_HUBS, useGameStore } from '../../store/gameStore';
-import { Holding } from '../../types/game';
+import { X, Users, AlertTriangle, CheckCircle2, MapPin, FlaskConical } from 'lucide-react';
+import { CITY_HUBS, HUB_PRODUCTS, MIN_REASONING_CHARS, useGameStore } from '../../store/gameStore';
 
-interface ProductOption {
-  id: string;
-  name: string;
-  region: string;
-  category: Holding['category'];
-  minAmount: number;
-  yieldLabel: string;
-  monthlyYieldRate: number;
-  riskLevel: Holding['riskLevel'];
-  description: string;
-  isGroupOrCoop?: boolean;
-  partners?: string[];
-}
-
-const HUB_PRODUCTS: Record<string, ProductOption[]> = {
-  jerusalem: [
-    {
-      id: 'jlm-savings',
-      name: 'Bank of Israel Linked Savings Cushion',
-      region: 'Jerusalem',
-      category: 'bank',
-      minAmount: 10000,
-      yieldLabel: '~4.5% Annual (BoI Rate Linked)',
-      monthlyYieldRate: 0.0038,
-      riskLevel: 'Low',
-      description: 'Liquid emergency reserve held in Jerusalem vaults; yield rises when BoI hikes interest rates.',
-    },
-    {
-      id: 'jlm-deposit',
-      name: 'National Capital Fixed Deposit (12M)',
-      region: 'Jerusalem',
-      category: 'bank',
-      minAmount: 20000,
-      yieldLabel: '~5.2% Annual Fixed',
-      monthlyYieldRate: 0.0044,
-      riskLevel: 'Low',
-      description: 'Locks in steady compounding interest with zero stock-market volatility.',
-    },
-  ],
-  haifa: [
-    {
-      id: 'haifa-group',
-      name: 'Haifa & Galilee Buyer Group (Kvutzat Rechisha)',
-      region: 'Haifa & North',
-      category: 'realestate',
-      minAmount: 25000,
-      yieldLabel: '~7.0% Rental + Stability Bonus',
-      monthlyYieldRate: 0.0058,
-      riskLevel: 'Medium',
-      description: 'Pool funds with Maya, Omer & Noa near the Haifa Technion & Port for lower entry prices and a +15% stability bonus.',
-      isGroupOrCoop: true,
-      partners: ['Maya', 'Omer', 'Noa'],
-    },
-    {
-      id: 'haifa-port-reit',
-      name: 'Northern Logistics & Residential Unit',
-      region: 'Haifa & North',
-      category: 'realestate',
-      minAmount: 15000,
-      yieldLabel: '~6.0% Northern Rental Yield',
-      monthlyYieldRate: 0.005,
-      riskLevel: 'Medium',
-      description: 'Higher rental-to-price yield than central Tel Aviv, backed by northern maritime industry.',
-    },
-  ],
-  telaviv: [
-    {
-      id: 'tlv-ta35',
-      name: 'TA-35 Blue-Chip Index Fund',
-      region: 'Tel Aviv (TASE)',
-      category: 'index',
-      minAmount: 10000,
-      yieldLabel: '~8.0% Historical Avg',
-      monthlyYieldRate: 0.0065,
-      riskLevel: 'Medium',
-      description: 'Broad diversification across Israel’s 35 largest public companies on the Tel Aviv Stock Exchange.',
-    },
-    {
-      id: 'tlv-ta125',
-      name: 'TA-125 Diversified Market ETF',
-      region: 'Tel Aviv (TASE)',
-      category: 'index',
-      minAmount: 12000,
-      yieldLabel: '~8.5% Historical Avg',
-      monthlyYieldRate: 0.007,
-      riskLevel: 'Medium',
-      description: 'Wide exposure across Israeli finance, real estate, and tech—cushions single-stock dips.',
-    },
-    {
-      id: 'tlv-single',
-      name: 'Silicon Wadi Single Tech Stock (Volatile)',
-      region: 'Tel Aviv (TASE)',
-      category: 'stock',
-      minAmount: 15000,
-      yieldLabel: 'High Swing (-9% to +12%)',
-      monthlyYieldRate: 0.009,
-      riskLevel: 'High',
-      description: 'Warning: Putting >35% of your Tik in a single stock penalizes your Diversification score.',
-    },
-  ],
-  beersheva: [
-    {
-      id: 'negev-solar',
-      name: 'Negev Solar & Clean-Grid Co-Op',
-      region: "Be'er Sheva & Negev",
-      category: 'coop',
-      minAmount: 15000,
-      yieldLabel: '~7.4% + National Dev Boost',
-      monthlyYieldRate: 0.0062,
-      riskLevel: 'Medium',
-      description: 'Co-build desert solar infrastructure with Dan & Maya. Boosts Israel Regional Development & Reputation.',
-      isGroupOrCoop: true,
-      partners: ['Dan', 'Maya'],
-    },
-    {
-      id: 'negev-cyber',
-      name: "Be'er Sheva Cyber Park & Student Housing Co-Op",
-      region: "Be'er Sheva & Negev",
-      category: 'coop',
-      minAmount: 12000,
-      yieldLabel: '~6.6% + Reputation Boost',
-      monthlyYieldRate: 0.0055,
-      riskLevel: 'Medium',
-      description: 'Partner with local founders next to Ben-Gurion University to grow southern tech housing.',
-      isGroupOrCoop: true,
-      partners: ['Omer', 'Noa'],
-    },
-  ],
-};
+const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
+const riskClass: Record<string, string> = { נמוך: 'low', בינוני: 'medium', גבוה: 'high' };
 
 export const HubModal: React.FC = () => {
   const openHub = useGameStore((s) => s.openHub);
   const cash = useGameStore((s) => s.cash);
+  const year = useGameStore((s) => s.year);
   const holdings = useGameStore((s) => s.holdings);
   const setOpenHub = useGameStore((s) => s.setOpenHub);
   const investAction = useGameStore((s) => s.investAction);
   const sellHolding = useGameStore((s) => s.sellHolding);
+  const isGameOver = useGameStore((s) => s.isGameOver);
 
   const [thought, setThought] = useState('');
+  const [amounts, setAmounts] = useState<Record<string, number>>({});
 
   if (!openHub) return null;
 
   const info = CITY_HUBS.find((h) => h.id === openHub)!;
-  const products = HUB_PRODUCTS[openHub] || [];
-  const relevantHoldings = holdings.filter((h) => {
-    if (openHub === 'jerusalem') return h.category === 'bank';
-    if (openHub === 'haifa') return h.category === 'realestate';
-    if (openHub === 'telaviv') return h.category === 'index' || h.category === 'stock';
-    return h.category === 'coop';
-  });
+  const products = HUB_PRODUCTS[openHub];
+  const productIds = new Set(products.map((p) => p.id));
+  const relevant = holdings.filter((h) => productIds.has(h.id));
+  const over = isGameOver();
+  const reasonOk = thought.trim().length >= MIN_REASONING_CHARS;
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-card">
+    <div className="modal-backdrop" onClick={() => setOpenHub(null)}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ borderColor: info.color }}>
           <div>
             <span className="stage-badge" style={{ backgroundColor: info.color }}>
@@ -164,72 +37,79 @@ export const HubModal: React.FC = () => {
             </span>
             <h2>
               <MapPin size={20} className="inline-icon" />
-              {info.cityName} ({info.hebrewName}) — {info.hubTitle}
+              {info.hebrewName}: {info.hubTitle}
             </h2>
             <p className="modal-sub">{info.subtitle}</p>
           </div>
-          <button className="icon-close" onClick={() => setOpenHub(null)}>
+          <button className="icon-close" onClick={() => setOpenHub(null)} aria-label="סגירה">
             <X size={20} />
           </button>
         </div>
 
         <div className="journal-prompt-box">
-          <label>Decision Journal — "What do you think will happen?" (Earns Reasoning Points in your Tik)</label>
-          <input
-            type="text"
+          <label htmlFor="reason">
+            יומן ההחלטות: למה אתם מחליטים כך, ומה לדעתכם יקרה ב-{year}? (חובה, לפחות משפט אחד)
+          </label>
+          <textarea
+            id="reason"
+            rows={2}
             value={thought}
             onChange={(e) => setThought(e.target.value)}
-            placeholder={`e.g., Investing in ${info.cityName} balances my Tik across Israel's economy...`}
+            placeholder="לדוגמה: אני משקיע בקרן מחקת מדד כי יש בה פיזור, ואני מוכן לחכות כמה שנים גם אם תהיה ירידה."
           />
+          {!reasonOk && thought.length > 0 && (
+            <div className="hint-small">עוד קצת: כתבו לפחות {MIN_REASONING_CHARS} תווים.</div>
+          )}
         </div>
 
         <div className="products-grid">
           {products.map((p) => {
-            const canAfford = cash >= p.minAmount;
+            const amount = amounts[p.id] ?? Math.min(10000, Math.floor(cash / 1000) * 1000);
+            const valid = amount >= 1000 && amount <= cash;
             return (
               <div key={p.id} className="product-card">
                 <div className="product-top">
                   <h3>{p.name}</h3>
-                  <span className={`risk-tag risk-${p.riskLevel.toLowerCase()}`}>
-                    {p.riskLevel} Risk
-                  </span>
+                  <span className={`risk-tag risk-${riskClass[p.riskLevel]}`}>סיכון {p.riskLevel}</span>
                 </div>
-                <p className="product-desc">{p.description}</p>
-                {p.partners && (
-                  <div className="partner-row">
-                    <Users size={14} /> Partners: {p.partners.join(', ')}
+                {p.fictional && (
+                  <div className="fictional-row">
+                    <FlaskConical size={14} /> בדוי: הנתונים מומצאים לצורך הלימוד
                   </div>
                 )}
-                {p.riskLevel === 'High' && (
+                <p className="product-desc">{p.description}</p>
+                <div className="yield-label">איך מחושבת התשואה: {p.howItEarns}</div>
+                {p.partners && (
+                  <div className="partner-row">
+                    <Users size={14} /> שותפים: {p.partners.join(', ')}
+                  </div>
+                )}
+                {p.riskLevel === 'גבוה' && (
                   <div className="warn-row">
-                    <AlertTriangle size={14} /> High concentration reduces anti-gambling score
+                    <AlertTriangle size={14} /> ריכוז של יותר מ-35% מהתיק בנכס כזה מוריד את ציון הפיזור
                   </div>
                 )}
                 <div className="product-footer">
-                  <div>
-                    <div className="yield-label">{p.yieldLabel}</div>
-                    <div className="amount-label">Pack into Tik: ₪{p.minAmount.toLocaleString()}</div>
-                  </div>
+                  <label className="amount-input">
+                    סכום (₪)
+                    <input
+                      type="number"
+                      min={1000}
+                      step={1000}
+                      max={cash}
+                      value={amount}
+                      onChange={(e) => setAmounts({ ...amounts, [p.id]: Number(e.target.value) })}
+                    />
+                  </label>
                   <button
                     className="btn-invest"
-                    disabled={!canAfford}
+                    disabled={over || !valid || !reasonOk}
+                    title={!reasonOk ? 'קודם כותבים הנמקה ביומן' : undefined}
                     onClick={() => {
-                      investAction({
-                        id: p.id,
-                        name: p.name,
-                        region: p.region,
-                        category: p.category,
-                        amount: p.minAmount,
-                        monthlyYieldRate: p.monthlyYieldRate,
-                        riskLevel: p.riskLevel,
-                        thoughtBefore: thought,
-                        isGroupOrCoop: p.isGroupOrCoop,
-                        partners: p.partners,
-                      });
-                      setThought('');
+                      if (investAction(p, amount, thought)) setThought('');
                     }}
                   >
-                    {canAfford ? `Pack ₪${p.minAmount.toLocaleString()}` : 'Need More Cash'}
+                    {!valid ? 'סכום לא תקין' : `השקעה של ${shekel(amount)}`}
                   </button>
                 </div>
               </div>
@@ -237,26 +117,30 @@ export const HubModal: React.FC = () => {
           })}
         </div>
 
-        {relevantHoldings.length > 0 && (
+        {relevant.length > 0 && (
           <div className="active-positions">
-            <h4>Positions Currently Packed in Your Tik from {info.cityName}</h4>
-            {relevantHoldings.map((h) => (
+            <h4>מה כבר יש לכם בתיק מכאן</h4>
+            {relevant.map((h) => (
               <div key={h.id} className="position-row">
                 <div>
                   <CheckCircle2 size={15} className="text-emerald inline-icon" />
-                  <strong>{h.name}</strong> — Value: ₪{h.currentValue.toLocaleString()} (Packed ₪
-                  {h.invested.toLocaleString()})
+                  <strong>{h.name}</strong> — שווי {shekel(h.currentValue)} (הושקעו {shekel(h.invested)}, מאז {h.sinceYear})
                 </div>
                 <button
                   className="btn-sell"
-                  onClick={() => sellHolding(h.id, thought || `Unpacking ${h.name} to rebalance`)}
+                  disabled={over || !reasonOk}
+                  title={!reasonOk ? 'גם מכירה צריכה הנמקה ביומן' : undefined}
+                  onClick={() => {
+                    if (sellHolding(h.id, thought)) setThought('');
+                  }}
                 >
-                  Unpack to Cash
+                  מכירה
                 </button>
               </div>
             ))}
           </div>
         )}
+        <p className="disclaimer">כסף וירטואלי ונתוני עבר בלבד. זה לא ייעוץ השקעות, וביצועי עבר לא מבטיחים תשואות בעתיד.</p>
       </div>
     </div>
   );

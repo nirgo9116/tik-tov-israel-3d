@@ -30,7 +30,6 @@ interface TikMeshProps {
 
 /**
  * The visual 3D "Tik" (Bag / Portfolio) worn on the player's back
- * and strapped onto the car roof rack while driving.
  * Evolves in material & trim as the player's Rubric Score climbs,
  * with 4 color-coded asset pockets that light up as each stage is funded.
  */
@@ -109,21 +108,14 @@ export const PlayerWithTik: React.FC = () => {
   const { camera } = useThree();
   const leftLegRef = useRef<THREE.Mesh>(null);
   const rightLegRef = useRef<THREE.Mesh>(null);
-  const carSpeedRef = useRef(0);
 
   const playerPos = useGameStore((s) => s.playerPos);
   const playerRot = useGameStore((s) => s.playerRot);
-  const drivingCarId = useGameStore((s) => s.drivingCarId);
-  const cars = useGameStore((s) => s.cars);
   const holdings = useGameStore((s) => s.holdings);
-  const openHub = useGameStore((s) => s.openHub);
-  const tikOpen = useGameStore((s) => s.tikOpen);
+  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen));
   const getRubric = useGameStore((s) => s.getRubric);
-
   const setPlayerTransform = useGameStore((s) => s.setPlayerTransform);
-  const updateCarTransform = useGameStore((s) => s.updateCarTransform);
   const setNearby = useGameStore((s) => s.setNearby);
-  const tickTime = useGameStore((s) => s.tickTime);
 
   const rubric = getRubric();
   const hasBank = holdings.some((h) => h.category === 'bank');
@@ -133,235 +125,107 @@ export const PlayerWithTik: React.FC = () => {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === 'INPUT' ||
-        document.activeElement?.tagName === 'TEXTAREA'
-      ) {
-        return;
-      }
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       KEYS[e.code] = true;
     };
     const onKeyUp = (e: KeyboardEvent) => {
       KEYS[e.code] = false;
     };
+    const onBlur = () => {
+      for (const k of Object.keys(KEYS)) KEYS[k] = false;
+    };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
   }, []);
 
   useFrame(({ clock }, rawDelta) => {
     const dt = Math.min(rawDelta, 0.05);
-    tickTime(dt);
-
-    const isPaused = Boolean(openHub || tikOpen);
     const forward = (KEYS['KeyW'] || KEYS['ArrowUp'] ? 1 : 0) - (KEYS['KeyS'] || KEYS['ArrowDown'] ? 1 : 0);
     const turn = (KEYS['KeyA'] || KEYS['ArrowLeft'] ? 1 : 0) - (KEYS['KeyD'] || KEYS['ArrowRight'] ? 1 : 0);
 
-    let focusX = playerPos[0];
-    let focusZ = playerPos[2];
-    let focusRot = playerRot;
+    let nx = playerPos[0];
+    let nz = playerPos[2];
+    let nextRot = playerRot;
 
-    if (!isPaused) {
-      if (drivingCarId) {
-        const car = cars.find((c) => c.id === drivingCarId);
-        if (car) {
-          const maxSpeed = 26;
-          const accel = 28;
-          if (forward !== 0) {
-            carSpeedRef.current = THREE.MathUtils.clamp(
-              carSpeedRef.current + forward * accel * dt,
-              -10,
-              maxSpeed
-            );
-          } else {
-            carSpeedRef.current = THREE.MathUtils.lerp(carSpeedRef.current, 0, dt * 3.5);
-          }
-
-          let nextRot = car.rotation;
-          if (Math.abs(carSpeedRef.current) > 0.4) {
-            const dir = carSpeedRef.current >= 0 ? 1 : -1;
-            nextRot += turn * 2.4 * dt * dir;
-          }
-
-          const nx = clampWorld(car.x + Math.sin(nextRot) * carSpeedRef.current * dt, -22, 26);
-          const nz = clampWorld(car.z + Math.cos(nextRot) * carSpeedRef.current * dt, -42, 42);
-
-          if (!collidesWithHub(nx, nz, 1.7)) {
-            updateCarTransform(car.id, nx, nz, nextRot);
-            setPlayerTransform([nx, 0, nz], nextRot);
-            focusX = nx;
-            focusZ = nz;
-            focusRot = nextRot;
-          } else {
-            carSpeedRef.current = -carSpeedRef.current * 0.3;
-          }
+    if (!paused) {
+      const walkSpeed = 12;
+      nextRot = playerRot + turn * 3.2 * dt;
+      if (forward !== 0) {
+        const candX = clampWorld(nx + Math.sin(nextRot) * forward * walkSpeed * dt, -22, 26);
+        const candZ = clampWorld(nz + Math.cos(nextRot) * forward * walkSpeed * dt, -42, 42);
+        if (!collidesWithHub(candX, candZ, 0.85)) {
+          nx = candX;
+          nz = candZ;
         }
-      } else {
-        carSpeedRef.current = 0;
-        const walkSpeed = 11;
-        let nextRot = playerRot + turn * 3.2 * dt;
-        let nx = playerPos[0];
-        let nz = playerPos[2];
-
-        if (forward !== 0) {
-          const candX = clampWorld(nx + Math.sin(nextRot) * forward * walkSpeed * dt, -22, 26);
-          const candZ = clampWorld(nz + Math.cos(nextRot) * forward * walkSpeed * dt, -42, 42);
-          if (!collidesWithHub(candX, candZ, 0.85)) {
-            nx = candX;
-            nz = candZ;
-          }
-        }
-
-        if (nx !== playerPos[0] || nz !== playerPos[2] || nextRot !== playerRot) {
-          setPlayerTransform([nx, 0, nz], nextRot);
-        }
-
-        focusX = nx;
-        focusZ = nz;
-        focusRot = nextRot;
-
-        if (leftLegRef.current && rightLegRef.current) {
-          if (forward !== 0) {
-            const swing = Math.sin(clock.getElapsedTime() * 12) * 0.55;
-            leftLegRef.current.rotation.x = swing;
-            rightLegRef.current.rotation.x = -swing;
-          } else {
-            leftLegRef.current.rotation.x = 0;
-            rightLegRef.current.rotation.x = 0;
-          }
-        }
+      }
+      if (nx !== playerPos[0] || nz !== playerPos[2] || nextRot !== playerRot) {
+        setPlayerTransform([nx, 0, nz], nextRot);
+      }
+      if (leftLegRef.current && rightLegRef.current) {
+        const swing = forward !== 0 ? Math.sin(clock.getElapsedTime() * 12) * 0.55 : 0;
+        leftLegRef.current.rotation.x = swing;
+        rightLegRef.current.rotation.x = -swing;
       }
     }
 
     let foundHub = null;
     for (const hub of CITY_HUBS) {
-      if (Math.hypot(focusX - hub.entryPos[0], focusZ - hub.entryPos[2]) < 3.8) {
+      if (Math.hypot(nx - hub.entryPos[0], nz - hub.entryPos[2]) < 3.8) {
         foundHub = hub.id;
         break;
       }
     }
+    setNearby(foundHub);
 
-    let foundCar = null;
-    if (!drivingCarId) {
-      for (const c of cars) {
-        if (Math.hypot(focusX - c.x, focusZ - c.z) < 3.6) {
-          foundCar = c.id;
-          break;
-        }
-      }
-    }
-    setNearby(foundHub, foundCar);
-
-    // Smooth third-person chase camera showing the player's Tik on their back
-    const camDist = drivingCarId ? 15.5 : 11.5;
-    const camHeight = drivingCarId ? 8.8 : 7.0;
-    const targetCamPos = new THREE.Vector3(
-      focusX - Math.sin(focusRot) * camDist,
-      camHeight,
-      focusZ - Math.cos(focusRot) * camDist
-    );
-    camera.position.lerp(targetCamPos, 1 - Math.exp(-6 * dt));
-    camera.lookAt(focusX, 1.6, focusZ);
+    // Third-person camera that keeps the Tik on the player's back in view
+    const camDist = 11.5;
+    const target = new THREE.Vector3(nx - Math.sin(nextRot) * camDist, 7.0, nz - Math.cos(nextRot) * camDist);
+    camera.position.lerp(target, 1 - Math.exp(-6 * dt));
+    camera.lookAt(nx, 1.6, nz);
   });
 
   return (
-    <group>
-      {/* Player Character Wearing the Evolving 3D Tik (Backpack) */}
-      {!drivingCarId && (
-        <group position={playerPos} rotation={[0, playerRot, 0]}>
-          {/* Legs */}
-          <mesh ref={leftLegRef} position={[-0.22, 0.55, 0]} castShadow>
-            <boxGeometry args={[0.26, 0.9, 0.28]} />
-            <meshStandardMaterial color="#1e3a8a" />
-          </mesh>
-          <mesh ref={rightLegRef} position={[0.22, 0.55, 0]} castShadow>
-            <boxGeometry args={[0.26, 0.9, 0.28]} />
-            <meshStandardMaterial color="#1e3a8a" />
-          </mesh>
-          {/* Torso */}
-          <mesh position={[0, 1.38, 0]} castShadow>
-            <boxGeometry args={[0.72, 0.85, 0.42]} />
-            <meshStandardMaterial color="#f8fafc" />
-          </mesh>
-          {/* Shoulder Straps */}
-          <mesh position={[-0.24, 1.42, 0.22]}>
-            <boxGeometry args={[0.1, 0.78, 0.05]} />
-            <meshStandardMaterial color="#0f172a" />
-          </mesh>
-          <mesh position={[0.24, 1.42, 0.22]}>
-            <boxGeometry args={[0.1, 0.78, 0.05]} />
-            <meshStandardMaterial color="#0f172a" />
-          </mesh>
-          {/* The 3D "Tik" Backpack Mounted on Player's Back */}
-          <group position={[0, 1.42, -0.38]}>
-            <TikBackpackMesh
-              rubricTotal={rubric.total}
-              hasBank={hasBank}
-              hasNadlan={hasNadlan}
-              hasTase={hasTase}
-              hasCoop={hasCoop}
-            />
-          </group>
-          {/* Head */}
-          <mesh position={[0, 2.08, 0]} castShadow>
-            <sphereGeometry args={[0.32, 16, 16]} />
-            <meshStandardMaterial color="#fed7aa" />
-          </mesh>
-        </group>
-      )}
-
-      {/* Drivable 3D Cars (Active car carries the player's Tik on the roof rack!) */}
-      {cars.map((car) => {
-        const isDriven = drivingCarId === car.id;
-        return (
-          <group key={car.id} position={[car.x, 0, car.z]} rotation={[0, car.rotation, 0]}>
-            <mesh position={[0, 0.65, 0]} castShadow>
-              <boxGeometry args={[2.1, 0.75, 4.2]} />
-              <meshStandardMaterial color={car.color} metalness={0.5} roughness={0.25} />
-            </mesh>
-            <mesh position={[0, 1.25, -0.2]} castShadow>
-              <boxGeometry args={[1.75, 0.65, 2.2]} />
-              <meshStandardMaterial color="#0f172a" roughness={0.15} metalness={0.7} />
-            </mesh>
-            {/* Tik Strapped on Roof Rack When Driving */}
-            {isDriven && (
-              <group position={[0, 1.78, -0.2]} rotation={[Math.PI / 2, 0, 0]} scale={[0.9, 0.9, 0.9]}>
-                <TikBackpackMesh
-                  rubricTotal={rubric.total}
-                  hasBank={hasBank}
-                  hasNadlan={hasNadlan}
-                  hasTase={hasTase}
-                  hasCoop={hasCoop}
-                />
-              </group>
-            )}
-            {/* Headlights */}
-            <mesh position={[-0.65, 0.65, 2.12]}>
-              <boxGeometry args={[0.35, 0.2, 0.08]} />
-              <meshStandardMaterial color="#fef08a" emissive="#fef08a" emissiveIntensity={2} />
-            </mesh>
-            <mesh position={[0.65, 0.65, 2.12]}>
-              <boxGeometry args={[0.35, 0.2, 0.08]} />
-              <meshStandardMaterial color="#fef08a" emissive="#fef08a" emissiveIntensity={2} />
-            </mesh>
-            {/* 4 Wheels */}
-            {[
-              [-1.05, 0.38, 1.3],
-              [1.05, 0.38, 1.3],
-              [-1.05, 0.38, -1.3],
-              [1.05, 0.38, -1.3],
-            ].map(([wx, wy, wz], idx) => (
-              <mesh key={idx} position={[wx, wy, wz]} rotation={[0, 0, Math.PI / 2]}>
-                <cylinderGeometry args={[0.38, 0.38, 0.3, 16]} />
-                <meshStandardMaterial color="#090d16" roughness={0.9} />
-              </mesh>
-            ))}
-          </group>
-        );
-      })}
+    <group position={playerPos} rotation={[0, playerRot, 0]}>
+      <mesh ref={leftLegRef} position={[-0.22, 0.55, 0]} castShadow>
+        <boxGeometry args={[0.26, 0.9, 0.28]} />
+        <meshStandardMaterial color="#1e3a8a" />
+      </mesh>
+      <mesh ref={rightLegRef} position={[0.22, 0.55, 0]} castShadow>
+        <boxGeometry args={[0.26, 0.9, 0.28]} />
+        <meshStandardMaterial color="#1e3a8a" />
+      </mesh>
+      <mesh position={[0, 1.38, 0]} castShadow>
+        <boxGeometry args={[0.72, 0.85, 0.42]} />
+        <meshStandardMaterial color="#f8fafc" />
+      </mesh>
+      <mesh position={[-0.24, 1.42, 0.22]}>
+        <boxGeometry args={[0.1, 0.78, 0.05]} />
+        <meshStandardMaterial color="#0f172a" />
+      </mesh>
+      <mesh position={[0.24, 1.42, 0.22]}>
+        <boxGeometry args={[0.1, 0.78, 0.05]} />
+        <meshStandardMaterial color="#0f172a" />
+      </mesh>
+      <group position={[0, 1.42, -0.38]}>
+        <TikBackpackMesh
+          rubricTotal={rubric.total}
+          hasBank={hasBank}
+          hasNadlan={hasNadlan}
+          hasTase={hasTase}
+          hasCoop={hasCoop}
+        />
+      </group>
+      <mesh position={[0, 2.08, 0]} castShadow>
+        <sphereGeometry args={[0.32, 16, 16]} />
+        <meshStandardMaterial color="#fed7aa" />
+      </mesh>
     </group>
   );
 };

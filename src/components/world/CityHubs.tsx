@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
 import { CITY_HUBS, useGameStore } from '../../store/gameStore';
+import { HEBREW_FONT } from '../../fonts';
 
 export const CityHubs: React.FC = () => {
   const nearbyHub = useGameStore((s) => s.nearbyHub);
@@ -55,15 +56,19 @@ export const CityHubs: React.FC = () => {
               {/* Floating City & Hub Sign */}
               <Billboard position={[0, bh / 2 + 4.4, 0]}>
                 <Text
+                  font={HEBREW_FONT}
+                  direction="rtl"
                   fontSize={1.45}
                   color="#ffffff"
                   outlineWidth={0.12}
                   outlineColor="#0f172a"
                   anchorY="bottom"
                 >
-                  {hub.cityName}
+                  {hub.hebrewName}
                 </Text>
                 <Text
+                  font={HEBREW_FONT}
+                  direction="rtl"
                   position={[0, -0.3, 0]}
                   fontSize={0.78}
                   color="#fde68a"

@@ -1,6 +1,31 @@
-import React from 'react';
-import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack } from 'lucide-react';
-import { useGameStore } from '../../store/gameStore';
+import React, { useState } from 'react';
+import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack, RotateCcw } from 'lucide-react';
+import { MIN_REASONING_CHARS, START_CASH, useGameStore } from '../../store/gameStore';
+import { FIRST_YEAR } from '../../data/history';
+
+const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
+
+const ReflectionBox: React.FC<{ entryId: string }> = ({ entryId }) => {
+  const addReflection = useGameStore((s) => s.addReflection);
+  const [text, setText] = useState('');
+  return (
+    <div className="reflect-box">
+      <textarea
+        rows={2}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="מה למדתי? האם ההנמקה שלי התאמתה למה שקרה? מה הייתי עושה אחרת?"
+      />
+      <button
+        className="btn-mini"
+        disabled={text.trim().length < MIN_REASONING_CHARS}
+        onClick={() => addReflection(entryId, text)}
+      >
+        שמירה
+      </button>
+    </div>
+  );
+};
 
 export const TikBagModal: React.FC = () => {
   const tikOpen = useGameStore((s) => s.tikOpen);
@@ -9,87 +34,68 @@ export const TikBagModal: React.FC = () => {
   const journal = useGameStore((s) => s.journal);
   const holdings = useGameStore((s) => s.holdings);
   const cash = useGameStore((s) => s.cash);
+  const year = useGameStore((s) => s.year);
+  const priceLevel = useGameStore((s) => s.priceLevel);
   const setTikOpen = useGameStore((s) => s.setTikOpen);
   const setTikTab = useGameStore((s) => s.setTikTab);
   const getRubric = useGameStore((s) => s.getRubric);
+  const getNetWorth = useGameStore((s) => s.getNetWorth);
+  const isGameOver = useGameStore((s) => s.isGameOver);
+  const resetGame = useGameStore((s) => s.resetGame);
 
   if (!tikOpen) return null;
 
   const rubric = getRubric();
+  const over = isGameOver();
+  const netWorth = getNetWorth();
   const bagTier =
-    rubric.total >= 75
-      ? 'Tier 3: Master Gold-Trimmed Executive Tik'
-      : rubric.total >= 45
-      ? 'Tier 2: Strategist Blue Multi-Pocket Tik'
-      : 'Tier 1: Explorer Canvas Starter Tik';
+    rubric.total >= 75 ? 'דרגה 3: תיק זהב' : rubric.total >= 45 ? 'דרגה 2: תיק כחול רב-תאים' : 'דרגה 1: תיק בד למתחילים';
 
-  const hasBank = holdings.some((h) => h.category === 'bank');
-  const hasNadlan = holdings.some((h) => h.category === 'realestate');
-  const hasTase = holdings.some((h) => h.category === 'index' || h.category === 'stock');
-  const hasCoop = holdings.some((h) => h.category === 'coop');
+  const has = (c: string[]) => holdings.some((h) => c.includes(h.category));
+  const pockets = [
+    { label: 'חיסכון', on: has(['bank']), cls: 'lit-green' },
+    { label: 'נדל"ן', on: has(['realestate']), cls: 'lit-amber' },
+    { label: 'שוק ההון', on: has(['index', 'stock']), cls: 'lit-blue' },
+    { label: 'שותפות', on: has(['coop']), cls: 'lit-purple' },
+  ];
 
   return (
-    <div className="modal-backdrop">
-      <div className="tik-bag-container">
-        {/* Backpack Top Handle */}
+    <div className="modal-backdrop" onClick={() => setTikOpen(false)}>
+      <div className="tik-bag-container" onClick={(e) => e.stopPropagation()}>
         <div className="tik-handle" />
-
         <div className="tik-header">
           <div>
             <div className="tik-title">
               <Backpack size={20} className="inline-icon" />
-              MY TIK (תיק ההשקעות והמסע שלי)
+              התיק שלי
             </div>
             <div className="tik-tier-badge">{bagTier}</div>
           </div>
-          <button className="icon-close" onClick={() => setTikOpen(false)}>
+          <button className="icon-close" onClick={() => setTikOpen(false)} aria-label="סגירה">
             <X size={18} />
           </button>
         </div>
 
-        {/* 4 Color-Coded Visual Pockets Status Strip */}
         <div className="pockets-strip">
-          <div className={`pocket-pill ${hasBank ? 'lit-green' : ''}`}>
-            <span>Jerusalem Vault</span>
-            <b>{hasBank ? 'PACKED' : 'EMPTY'}</b>
-          </div>
-          <div className={`pocket-pill ${hasNadlan ? 'lit-amber' : ''}`}>
-            <span>Haifa Nadlan</span>
-            <b>{hasNadlan ? 'PACKED' : 'EMPTY'}</b>
-          </div>
-          <div className={`pocket-pill ${hasTase ? 'lit-blue' : ''}`}>
-            <span>TLV Stock Exch</span>
-            <b>{hasTase ? 'PACKED' : 'EMPTY'}</b>
-          </div>
-          <div className={`pocket-pill ${hasCoop ? 'lit-purple' : ''}`}>
-            <span>Negev Co-Op</span>
-            <b>{hasCoop ? 'PACKED' : 'EMPTY'}</b>
-          </div>
+          {pockets.map((p) => (
+            <div key={p.label} className={`pocket-pill ${p.on ? p.cls : ''}`}>
+              <span>{p.label}</span>
+              <b>{p.on ? 'יש' : 'ריק'}</b>
+            </div>
+          ))}
         </div>
 
         <div className="phone-tabs">
-          <button
-            className={tikTab === 'bag' ? 'active' : ''}
-            onClick={() => setTikTab('bag')}
-          >
-            <Backpack size={14} /> Contents ({holdings.length})
+          <button className={tikTab === 'bag' ? 'active' : ''} onClick={() => setTikTab('bag')}>
+            <Backpack size={14} /> תכולה ({holdings.length})
           </button>
-          <button
-            className={tikTab === 'missions' ? 'active' : ''}
-            onClick={() => setTikTab('missions')}
-          >
-            <Target size={14} /> Missions
+          <button className={tikTab === 'missions' ? 'active' : ''} onClick={() => setTikTab('missions')}>
+            <Target size={14} /> משימות
           </button>
-          <button
-            className={tikTab === 'journal' ? 'active' : ''}
-            onClick={() => setTikTab('journal')}
-          >
-            <BookOpen size={14} /> Journal ({journal.length})
+          <button className={tikTab === 'journal' ? 'active' : ''} onClick={() => setTikTab('journal')}>
+            <BookOpen size={14} /> יומן ({journal.length})
           </button>
-          <button
-            className={tikTab === 'rubric' ? 'active' : ''}
-            onClick={() => setTikTab('rubric')}
-          >
+          <button className={tikTab === 'rubric' ? 'active' : ''} onClick={() => setTikTab('rubric')}>
             <Award size={14} /> {rubric.total}/100
           </button>
         </div>
@@ -97,27 +103,39 @@ export const TikBagModal: React.FC = () => {
         <div className="phone-body">
           {tikTab === 'bag' && (
             <div className="phone-section">
-              <div className="mini-holding-row" style={{ borderLeft: '4px solid #10b981' }}>
-                <span>Liquid Shekel Reserve (Cash Pocket)</span>
-                <strong className="text-emerald">₪{cash.toLocaleString()}</strong>
+              {over && (
+                <div className="summary-card">
+                  <h4>סיכום המשחק ({FIRST_YEAR}–{year - 1})</h4>
+                  <p>
+                    התחלתם עם {shekel(START_CASH)} וסיימתם עם {shekel(netWorth)}. אחרי האינפלציה, זה שווה{' '}
+                    {shekel(netWorth / priceLevel)} במחירי {FIRST_YEAR}.
+                  </p>
+                  <p>ציון ההחלטות: {rubric.total}/100. זה מה שקובע, לא הרווח.</p>
+                  <button className="btn-mini" onClick={resetGame}>
+                    <RotateCcw size={14} /> משחק חדש
+                  </button>
+                </div>
+              )}
+              <div className="mini-holding-row pocket-cash">
+                <span>כסף פנוי (לא מרוויח ריבית)</span>
+                <strong className="text-emerald">{shekel(cash)}</strong>
               </div>
-              <h4 style={{ fontSize: 13, color: '#94a3b8', margin: '12px 0 8px' }}>
-                Regional Deeds & Assets Inside Your Tik
-              </h4>
+              <h4 className="section-title">הנכסים בתיק</h4>
               {holdings.length === 0 ? (
-                <p className="text-muted">
-                  Your asset pockets are empty! Drive to Jerusalem, Haifa, Tel Aviv, or Be'er Sheva to pack your Tik.
-                </p>
+                <p className="text-muted">התיק עוד ריק. בקרו בירושלים, בחיפה, בתל אביב או בבאר שבע כדי להשקיע.</p>
               ) : (
                 holdings.map((h) => (
                   <div key={h.id} className="mini-holding-row">
                     <div>
-                      <div><strong>{h.name}</strong></div>
-                      <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                        Region: {h.region} • {h.riskLevel} Risk
+                      <div>
+                        <strong>{h.name}</strong>
+                        {h.fictional && <span className="fict-tag">בדוי</span>}
+                      </div>
+                      <div className="row-sub">
+                        {h.region} • סיכון {h.riskLevel} • מאז {h.sinceYear}
                       </div>
                     </div>
-                    <strong>₪{h.currentValue.toLocaleString()}</strong>
+                    <strong>{shekel(h.currentValue)}</strong>
                   </div>
                 ))
               )}
@@ -126,26 +144,15 @@ export const TikBagModal: React.FC = () => {
 
           {tikTab === 'missions' && (
             <div className="phone-section">
-              <p className="phone-hint">
-                Travel across Israel's four economic regions to upgrade your Tik and build partner reputation.
-              </p>
+              <p className="phone-hint">משימות מקנות הבנה, לא כסף. אין בונוסים כספיים במשחק.</p>
               {missions.map((m) => (
                 <div key={m.id} className={`mission-card ${m.completed ? 'done' : ''}`}>
                   <div className="mission-top">
-                    {m.completed ? (
-                      <CheckCircle size={18} className="text-emerald" />
-                    ) : (
-                      <Circle size={18} className="text-muted" />
-                    )}
+                    {m.completed ? <CheckCircle size={18} className="text-emerald" /> : <Circle size={18} className="text-muted" />}
                     <strong>{m.title}</strong>
                   </div>
-                  <div style={{ fontSize: 11, color: '#38bdf8', marginBottom: 4 }}>
-                    Route: {m.regionHint}
-                  </div>
+                  <div className="row-sub">איפה: {m.regionHint}</div>
                   <p>{m.description}</p>
-                  <div className="mission-reward">
-                    Reward: +₪{m.rewardCash.toLocaleString()} • +{m.rewardRep} Reputation
-                  </div>
                 </div>
               ))}
             </div>
@@ -153,22 +160,30 @@ export const TikBagModal: React.FC = () => {
 
           {tikTab === 'journal' && (
             <div className="phone-section">
-              <p className="phone-hint">
-                "Winners are decided by good reasoning, not lucky gambling."
-              </p>
+              <p className="phone-hint">"מנצחים בהחלטות טובות, לא ברווח." אחרי שהשנה נגמרת, כתבו מה למדתם.</p>
+              {journal.length === 0 && <p className="text-muted">עוד אין החלטות ביומן.</p>}
               {journal.map((entry) => (
                 <div key={entry.id} className="journal-card">
                   <div className="journal-meta">
-                    <span>Month {entry.month} • {entry.region}</span>
+                    <span>
+                      {entry.year} • {entry.region}
+                    </span>
                     <span className="journal-cat">{entry.category}</span>
                   </div>
                   <div className="journal-action">{entry.actionTitle}</div>
                   <div className="journal-q">
-                    <b>What I thought:</b> "{entry.thoughtBefore}"
+                    <b>מה חשבתי:</b> "{entry.thoughtBefore}"
                   </div>
-                  <div className="journal-a">
-                    <b>What I learned:</b> {entry.learnedAfter}
-                  </div>
+                  {entry.outcomeNote && <div className="journal-outcome">{entry.outcomeNote}</div>}
+                  {entry.learnedAfter ? (
+                    <div className="journal-a">
+                      <b>מה למדתי:</b> {entry.learnedAfter}
+                    </div>
+                  ) : entry.year < year ? (
+                    <ReflectionBox entryId={entry.id} />
+                  ) : (
+                    <div className="row-sub">את "מה למדתי" כותבים אחרי שהשנה מסתיימת.</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -178,31 +193,25 @@ export const TikBagModal: React.FC = () => {
             <div className="phone-section">
               <div className="rubric-hero">
                 <div className="rubric-big">{rubric.total} / 100</div>
-                <div>Tik Tov Anti-Gambling Mastery Score</div>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                  Reach 45 pts for Tier 2 Blue Tik • 75 pts for Tier 3 Gold Executive Tik
-                </div>
+                <div>ציון איכות ההחלטות</div>
+                <div className="row-sub">הערכה אוטומטית ראשונית. המורה קורא את ההנמקות וקובע את הציון הסופי.</div>
               </div>
-
               {[
-                { label: '1. Reasoning Quality (Journal)', val: rubric.reasoning, max: 30 },
-                { label: '2. Diversification & Risk Fit', val: rubric.diversification, max: 20 },
-                { label: '3. Risk-Adjusted Return', val: rubric.riskAdjusted, max: 20 },
-                { label: '4. Learning & Revision', val: rubric.learning, max: 15 },
-                { label: '5. Monthly Consistency', val: rubric.consistency, max: 15 },
-              ].map((item, idx) => (
-                <div key={idx} className="rubric-row">
+                { label: '1. איכות ההנמקות ביומן', val: rubric.reasoning, max: 30 },
+                { label: '2. פיזור והתאמה לסיכון', val: rubric.diversification, max: 20 },
+                { label: '3. תשואה מתואמת סיכון (אחרי אינפלציה)', val: rubric.riskAdjusted, max: 20 },
+                { label: '4. למידה ותיקון (מה למדתי)', val: rubric.learning, max: 15 },
+                { label: '5. התמדה לאורך השנים', val: rubric.consistency, max: 15 },
+              ].map((item) => (
+                <div key={item.label} className="rubric-row">
                   <div className="rubric-labels">
                     <span>{item.label}</span>
                     <strong>
-                      {item.val}/{item.max} pts
+                      {item.val}/{item.max}
                     </strong>
                   </div>
                   <div className="rubric-bar">
-                    <div
-                      className="rubric-fill"
-                      style={{ width: `${(item.val / item.max) * 100}%` }}
-                    />
+                    <div className="rubric-fill" style={{ width: `${(item.val / item.max) * 100}%` }} />
                   </div>
                 </div>
               ))}

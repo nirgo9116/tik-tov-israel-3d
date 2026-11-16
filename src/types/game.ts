@@ -1,9 +1,11 @@
+import type { AssetKey } from '../data/history';
+
 export type CityHubId = 'jerusalem' | 'haifa' | 'telaviv' | 'beersheva';
 
 export interface CityHubInfo {
   id: CityHubId;
-  cityName: string;
   hebrewName: string;
+  englishName: string;
   regionLabel: string;
   hubTitle: string;
   subtitle: string;
@@ -14,38 +16,45 @@ export interface CityHubInfo {
   entryPos: [number, number, number];
 }
 
+export type Category = 'bank' | 'realestate' | 'index' | 'stock' | 'coop';
+export type RiskLevel = 'נמוך' | 'בינוני' | 'גבוה';
+
 export interface Holding {
   id: string;
   name: string;
   region: string;
-  category: 'bank' | 'realestate' | 'index' | 'stock' | 'coop';
+  category: Category;
+  assetKey: AssetKey;
   invested: number;
   currentValue: number;
-  monthlyYieldRate: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
-  isGroupOrCoop?: boolean;
+  /** Year in which this holding was first bought. */
+  sinceYear: number;
+  riskLevel: RiskLevel;
+  fictional?: boolean;
   partners?: string[];
 }
 
 export interface JournalEntry {
   id: string;
-  month: number;
+  year: number;
+  holdingId?: string;
   actionTitle: string;
   region: string;
   category: string;
   amount: number;
+  /** What the student wrote before deciding (required, at least MIN_REASONING_CHARS). */
   thoughtBefore: string;
+  /** The student's own reflection after the year ended. Empty until written. */
   learnedAfter: string;
+  /** What actually happened to this holding in the year after the decision (system note). */
+  outcomeNote?: string;
   outcomeDelta?: number;
 }
 
-export interface MacroEvent {
-  id: string;
-  month: number;
-  originCity: string;
+export interface YearEvent {
+  year: number;
   headline: string;
   detail: string;
-  impactType: 'rate_hike' | 'rate_cut' | 'market_dip' | 'north_housing' | 'negev_solar';
 }
 
 export interface Mission {
@@ -53,25 +62,14 @@ export interface Mission {
   title: string;
   regionHint: string;
   description: string;
-  rewardCash: number;
-  rewardRep: number;
   completed: boolean;
 }
 
-export interface CarState {
-  id: string;
-  name: string;
-  color: string;
-  x: number;
-  z: number;
-  rotation: number;
-}
-
 export interface RubricBreakdown {
-  reasoning: number;       // max 30
+  reasoning: number; // max 30
   diversification: number; // max 20
-  riskAdjusted: number;    // max 20
-  learning: number;        // max 15
-  consistency: number;     // max 15
-  total: number;           // max 100
+  riskAdjusted: number; // max 20
+  learning: number; // max 15
+  consistency: number; // max 15
+  total: number; // max 100
 }

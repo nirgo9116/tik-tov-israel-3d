@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { HEBREW_FONT } from '../../fonts';
 import { Text, Billboard } from '@react-three/drei';
 
 export const IsraelMapWorld: React.FC = () => {
@@ -176,18 +177,18 @@ export const IsraelMapWorld: React.FC = () => {
 
       {/* Highway Direction Signs */}
       <Billboard position={[-4, 3.6, -16]}>
-        <Text fontSize={0.85} color="#38bdf8" outlineWidth={0.08} outlineColor="#0f172a">
-          ▲ NORTH: HAIFA & GALILEE (כביש 6)
+        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.85} color="#38bdf8" outlineWidth={0.08} outlineColor="#0f172a">
+          צפון: חיפה והגליל
         </Text>
       </Billboard>
       <Billboard position={[3, 3.6, -4.5]}>
-        <Text fontSize={0.85} color="#34d399" outlineWidth={0.08} outlineColor="#0f172a">
-          ▶ EAST: JERUSALEM (כביש 1)
+        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.85} color="#34d399" outlineWidth={0.08} outlineColor="#0f172a">
+          מזרח: ירושלים, כביש 1
         </Text>
       </Billboard>
       <Billboard position={[-4, 3.6, 16]}>
-        <Text fontSize={0.85} color="#c084fc" outlineWidth={0.08} outlineColor="#0f172a">
-          ▼ SOUTH: BE'ER SHEVA & NEGEV
+        <Text font={HEBREW_FONT} direction="rtl" fontSize={0.85} color="#c084fc" outlineWidth={0.08} outlineColor="#0f172a">
+          דרום: באר שבע והנגב
         </Text>
       </Billboard>
     </group>

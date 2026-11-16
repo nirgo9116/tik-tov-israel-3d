@@ -1,11 +1,27 @@
-# Tik Tov: Israel Economic Geography (3D)
+# תיק טוב: מסע השקעות בישראל
 
-A 3D open-world financial and geographic simulation of Israel built with **React**, **TypeScript**, **Three.js (`@react-three/fiber`)**, and **Zustand**.
+כלי תרגול לחינוך פיננסי לכיתה י׳. כל תלמיד מנהל תיק השקעות וירטואלי לאורך 8 "שנים" (2017–2024), מנמק כל החלטה,
+ובסוף כל שנה רואה מה קרה באמת לפי נתוני העבר. הציון נקבע לפי איכות ההחלטות, לא לפי הרווח.
 
-## Key Features
-- **Israel Economic Geography Map:** Drive along Route 6 and Highway 1 between **Haifa & The North** (Port Logistics & Real Estate Buyer Groups), **Tel Aviv & Gush Dan** (TASE Stock Exchange & Silicon Wadi), **Jerusalem** (Bank of Israel & National Vaults), and **Be'er Sheva & The Negev** (Clean-Energy & Cyber Co-Ops).
-- **Visual Evolving "Tik" (תיק / Backpack):** Your character wears a 3D **Tik** with 4 color-coded asset pockets that light up as you fund each region, evolving from a Canvas Starter Tik into a Gold-Trimmed Executive Tik as your rubric score rises.
+## מה במשחק
+- **ארבע ערים, ארבעה סוגי השקעה:** ירושלים (פיקדון וריבית בנק ישראל), חיפה (נדל"ן), תל אביב (קרן מחקת מדד ת"א-125 מול מניה בודדת), באר שבע (שותפות אזורית).
+- **נתוני עבר אמיתיים:** ת"א-125, מדד מחירי הדירות, אינפלציה וריבית בנק ישראל (`src/data/history.ts`). המניה הבודדת והקואופרטיב בדויים ומסומנים כך.
+- **אין החלטה בלי הנמקה:** אי אפשר לקנות או למכור בלי לכתוב הנמקה ביומן. אחרי כל שנה התלמיד כותב "מה למדתי".
+- **אינפלציה וכוח קנייה:** שווי התיק מוצג גם במחירי 2017.
+- **המורה מקדם את הזמן:** כפתור "לשנה הבאה". אין שעון שרץ לבד.
+- **הליכה ורכבת:** הולכים בין הערים, או נוסעים ברכבת (מקש T). אין נהיגה.
+- **גרסה קלה:** כפתור "גרסה קלה" (או `?lite=1` בכתובת) מציג מפה שטוחה בלי תלת-ממד, למחשבים חלשים.
+- **מסך למורה:** כפתור "למורה" מציג את טבלת הנתונים, המקורות, ועקרונות הבטיחות והפרטיות.
 
-## How to Run Today
-1. Extract this ZIP to your Desktop (e.g., `Desktop\tik-tov-3d-israel`).
-2. Double-click **`RUN_GAME.bat`**.
+## בטיחות ופרטיות
+כסף וירטואלי בלבד, בלי מסחר, בלי המלצות ובלי פרסומות. המשחק לא שולח שום מידע לאינטרנט, וגם הגופן נמצא בתוך הפרויקט.
+ההתקדמות נשמרת רק בדפדפן של התלמיד (localStorage). לפני הפעלה בכיתה: לתאם עם הנהלת בית הספר ולבדוק מול נוהלי אבטחת המידע של משרד החינוך.
+
+## הפעלה
+1. להתקין Node.js LTS.
+2. לחיצה כפולה על `RUN_GAME.bat` (או `npm install` ואז `npm run dev`).
+3. לאנדרואיד: `PREPARE_ANDROID.bat`, ואז לפתוח את תיקיית `android` ב-Android Studio.
+
+## לפני שימוש בכיתה
+- לאמת את המספרים ב-`src/data/history.ts` מול הלמ"ס, בנק ישראל והבורסה.
+- בהמשך: להוסיף אג"ח ממשלתי (חלק מתוכנית הלימודים) ודמי ניהול.

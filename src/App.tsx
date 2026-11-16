@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { IsraelMapWorld } from './components/world/IsraelMapWorld';
 import { CityHubs } from './components/world/CityHubs';
@@ -6,57 +6,58 @@ import { PlayerWithTik } from './components/world/PlayerWithTik';
 import { HUD } from './components/ui/HUD';
 import { HubModal } from './components/ui/HubModal';
 import { TikBagModal } from './components/ui/TikBagModal';
+import { TrainModal } from './components/ui/TrainModal';
+import { InfoModal } from './components/ui/InfoModal';
+import { LiteMap } from './components/ui/LiteMap';
 import { useGameStore } from './store/gameStore';
 
 export const App: React.FC = () => {
-  const nearbyHub = useGameStore((s) => s.nearbyHub);
-  const openHub = useGameStore((s) => s.openHub);
-  const tikOpen = useGameStore((s) => s.tikOpen);
-  const setOpenHub = useGameStore((s) => s.setOpenHub);
-  const setTikOpen = useGameStore((s) => s.setTikOpen);
-  const toggleVehicle = useGameStore((s) => s.toggleVehicle);
+  const liteMode = useGameStore((s) => s.liteMode);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === 'INPUT' ||
-        document.activeElement?.tagName === 'TEXTAREA'
-      ) {
-        return;
-      }
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      const s = useGameStore.getState();
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen;
 
       if (e.code === 'KeyP' || e.code === 'Tab') {
         e.preventDefault();
-        setTikOpen(!tikOpen);
+        s.setTikOpen(!s.tikOpen);
       } else if (e.code === 'Escape') {
-        if (openHub) setOpenHub(null);
-        if (tikOpen) setTikOpen(false);
-      } else if (e.code === 'Enter' || e.code === 'Space') {
-        if (!openHub && !tikOpen && nearbyHub) {
-          e.preventDefault();
-          setOpenHub(nearbyHub);
-        }
-      } else if (e.code === 'KeyE') {
-        if (!openHub && !tikOpen) {
-          toggleVehicle();
-        }
+        if (s.openHub) s.setOpenHub(null);
+        if (s.tikOpen) s.setTikOpen(false);
+        if (s.trainOpen) s.setTrainOpen(false);
+        if (s.infoOpen) s.setInfoOpen(false);
+      } else if (e.code === 'KeyT' && !s.liteMode && !anyOpen) {
+        s.setTrainOpen(true);
+      } else if ((e.code === 'Enter' || e.code === 'Space') && !anyOpen && s.nearbyHub) {
+        e.preventDefault();
+        s.setOpenHub(s.nearbyHub);
       }
     };
-
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [nearbyHub, openHub, tikOpen, setOpenHub, setTikOpen, toggleVehicle]);
+  }, []);
 
   return (
     <div className="game-root">
-      <Canvas shadows camera={{ position: [-6, 7.5, -15], fov: 50 }}>
-        <IsraelMapWorld />
-        <CityHubs />
-        <PlayerWithTik />
-      </Canvas>
+      {liteMode ? (
+        <LiteMap />
+      ) : (
+        <Canvas shadows dpr={[1, 1.5]} camera={{ position: [-6, 7.5, -15], fov: 50 }}>
+          <Suspense fallback={null}>
+            <IsraelMapWorld />
+            <CityHubs />
+            <PlayerWithTik />
+          </Suspense>
+        </Canvas>
+      )}
       <HUD />
       <HubModal />
       <TikBagModal />
+      <TrainModal />
+      <InfoModal />
     </div>
   );
 };

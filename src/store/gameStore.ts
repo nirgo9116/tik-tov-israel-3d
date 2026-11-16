@@ -1,24 +1,31 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import {
-  CarState,
+  Category,
   CityHubId,
   CityHubInfo,
   Holding,
   JournalEntry,
-  MacroEvent,
   Mission,
+  RiskLevel,
   RubricBreakdown,
+  YearEvent,
 } from '../types/game';
+import { AssetKey, FIRST_YEAR, LAST_YEAR, START_RATE, yearData } from '../data/history';
+
+export const START_CASH = 50000;
+export const MIN_REASONING_CHARS = 15;
+const CONCEPT_WORDS = ['סיכון', 'פיזור', 'ריבית', 'אינפלציה', 'טווח', 'תשואה', 'נזיל', 'מדד', 'שכירות', 'הפסד', 'ארוך', 'קצר'];
 
 export const CITY_HUBS: CityHubInfo[] = [
   {
     id: 'haifa',
-    cityName: 'HAIFA & THE NORTH',
     hebrewName: 'חיפה והצפון',
-    regionLabel: 'Northern Coast & Carmel',
-    hubTitle: 'Port Logistics & Buyer Groups',
-    subtitle: 'High-Yield Northern Real Estate (Kvutzot Rechisha) & Maritime Trade',
-    stageLabel: 'Stage 2 • Northern Real Estate',
+    englishName: 'HAIFA',
+    regionLabel: 'מישור החוף הצפוני והכרמל',
+    hubTitle: 'נדל"ן בצפון',
+    subtitle: 'דירה להשקעה וקבוצת רכישה. התשואה לפי מדד מחירי הדירות הארצי, ועוד שכירות.',
+    stageLabel: 'שלב 2: נדל"ן',
     color: '#f59e0b',
     position: [-10, 0, -34],
     size: [13, 13, 11],
@@ -26,12 +33,12 @@ export const CITY_HUBS: CityHubInfo[] = [
   },
   {
     id: 'telaviv',
-    cityName: 'TEL AVIV & GUSH DAN',
     hebrewName: 'תל אביב וגוש דן',
-    regionLabel: 'Central Coastal Plain',
-    hubTitle: 'TASE Stock Exchange & Silicon Wadi',
-    subtitle: 'TA-35 / TA-125 Indices, Tech Equities & High-Liquidity Center',
-    stageLabel: 'Stage 3 • Capital Markets',
+    englishName: 'TEL AVIV',
+    regionLabel: 'מישור החוף המרכזי',
+    hubTitle: 'הבורסה לניירות ערך',
+    subtitle: 'קרן מחקת מדד ת"א-125 מול מניה בודדת.',
+    stageLabel: 'שלב 3: שוק ההון',
     color: '#3b82f6',
     position: [-18, 0, -4],
     size: [13, 19, 11],
@@ -39,12 +46,12 @@ export const CITY_HUBS: CityHubInfo[] = [
   },
   {
     id: 'jerusalem',
-    cityName: 'JERUSALEM',
     hebrewName: 'ירושלים',
-    regionLabel: 'Judean Hills • Capital',
-    hubTitle: 'Bank of Israel & National Vaults',
-    subtitle: 'Monetary Policy Center, Fixed Deposits & Capital Protection',
-    stageLabel: 'Stage 1 • Savings & BoI Rates',
+    englishName: 'JERUSALEM',
+    regionLabel: 'הרי יהודה',
+    hubTitle: 'בנק ישראל וחיסכון',
+    subtitle: 'פיקדון בבנק. התשואה תלויה בריבית של בנק ישראל.',
+    stageLabel: 'שלב 1: חיסכון',
     color: '#10b981',
     position: [15, 0, 3],
     size: [14, 12, 12],
@@ -52,12 +59,12 @@ export const CITY_HUBS: CityHubInfo[] = [
   },
   {
     id: 'beersheva',
-    cityName: "BE'ER SHEVA & NEGEV",
     hebrewName: 'באר שבע והנגב',
-    regionLabel: 'Southern Growth Frontier',
-    hubTitle: 'Negev Clean-Energy & Cyber Co-Op',
-    subtitle: 'Solar Infrastructure Partnerships, Cyber Park & Emerging Housing',
-    stageLabel: 'Community • Regional Co-Ops',
+    englishName: "BE'ER SHEVA",
+    regionLabel: 'הנגב',
+    hubTitle: 'שותפות אזורית',
+    subtitle: 'קואופרטיב סולארי בדוי, להמחשת השקעה משותפת בפיתוח אזורי.',
+    stageLabel: 'העשרה: שותפויות',
     color: '#a855f7',
     position: [-4, 0, 34],
     size: [14, 11, 11],
@@ -65,499 +72,461 @@ export const CITY_HUBS: CityHubInfo[] = [
   },
 ];
 
-const INITIAL_CARS: CarState[] = [
-  { id: 'car-1', name: 'Route 6 Cruiser', color: '#38bdf8', x: -6, z: -8, rotation: 0 },
-  { id: 'car-2', name: 'Judean GT', color: '#f43f5e', x: 3, z: 3, rotation: -Math.PI / 2 },
-  { id: 'car-3', name: 'Negev Solar EV', color: '#34d399', x: -5, z: 20, rotation: Math.PI },
-];
+export interface ProductOption {
+  id: string;
+  name: string;
+  region: string;
+  category: Category;
+  assetKey: AssetKey;
+  riskLevel: RiskLevel;
+  description: string;
+  howItEarns: string;
+  fictional?: boolean;
+  partners?: string[];
+}
+
+export const HUB_PRODUCTS: Record<CityHubId, ProductOption[]> = {
+  jerusalem: [
+    {
+      id: 'jlm-deposit',
+      name: 'פיקדון בנקאי',
+      region: 'ירושלים',
+      category: 'bank',
+      assetKey: 'deposit',
+      riskLevel: 'נמוך',
+      description: 'כסף שמופקד בבנק ומרוויח ריבית. הקרן לא יורדת, אבל כשהאינפלציה גבוהה מהריבית, כוח הקנייה נשחק.',
+      howItEarns: 'בערך הריבית הממוצעת של בנק ישראל באותה שנה',
+    },
+  ],
+  haifa: [
+    {
+      id: 'haifa-apartment',
+      name: 'דירה להשקעה בצפון',
+      region: 'חיפה והצפון',
+      category: 'realestate',
+      assetKey: 'housingRent',
+      riskLevel: 'בינוני',
+      description: 'שינוי מחירי הדירות ועוד דמי שכירות. בפועל קשה למכור דירה מהר (נזילות נמוכה), ויש הוצאות שלא נכללות כאן.',
+      howItEarns: 'מדד מחירי הדירות הארצי + 3% שכירות (הנחה)',
+    },
+    {
+      id: 'haifa-group',
+      name: 'קבוצת רכישה עם שותפים',
+      region: 'חיפה והצפון',
+      category: 'realestate',
+      assetKey: 'housing',
+      riskLevel: 'גבוה',
+      description: 'כמה שותפים קונים יחד קרקע או דירות. אפשר להיכנס עם פחות כסף, אבל יש סיכונים: עיכובים בבנייה ותלות בשותפים.',
+      howItEarns: 'מדד מחירי הדירות הארצי, בלי שכירות (הדירה עוד בבנייה)',
+      partners: ['מאיה', 'עומר', 'נועה'],
+    },
+  ],
+  telaviv: [
+    {
+      id: 'tlv-ta125',
+      name: 'קרן מחקת מדד ת"א-125',
+      region: 'תל אביב',
+      category: 'index',
+      assetKey: 'ta125',
+      riskLevel: 'בינוני',
+      description: 'קרן שמשקיעה ב-125 החברות הגדולות בבורסה בתל אביב. יש שנים של ירידות, אבל הפיזור מקטין את הסיכון של חברה אחת.',
+      howItEarns: 'התשואה השנתית האמיתית של מדד ת"א-125',
+    },
+    {
+      id: 'tlv-single',
+      name: 'מניה בודדת: "נובה-טק"',
+      region: 'תל אביב',
+      category: 'stock',
+      assetKey: 'fictionalStock',
+      riskLevel: 'גבוה',
+      fictional: true,
+      description: 'חברת טכנולוגיה בדויה. התשואות שלה מומצאות ונועדו להראות כמה מניה אחת יכולה לקפוץ ולצנוח.',
+      howItEarns: 'תשואות בדויות להמחשה, עם תנודות חדות',
+    },
+  ],
+  beersheva: [
+    {
+      id: 'negev-coop',
+      name: 'קואופרטיב סולארי בנגב',
+      region: 'באר שבע והנגב',
+      category: 'coop',
+      assetKey: 'fictionalCoop',
+      riskLevel: 'בינוני',
+      fictional: true,
+      partners: ['דן', 'מאיה'],
+      description: 'שותפות בדויה בהקמת שדה סולארי. ממחישה השקעה משותפת עם תשואה יציבה יחסית, אבל קשה לצאת ממנה מהר.',
+      howItEarns: 'תשואות בדויות להמחשה',
+    },
+  ],
+};
 
 const INITIAL_MISSIONS: Mission[] = [
   {
     id: 'm1',
-    title: '1. Jerusalem Capital Buffer',
-    regionHint: 'Drive East on Hwy 1 to Jerusalem',
-    description: 'Deposit at least ₪15,000 in the Jerusalem Bank Vaults before the next BoI rate decision.',
-    rewardCash: 3500,
-    rewardRep: 10,
+    title: 'כרית ביטחון',
+    regionHint: 'ירושלים',
+    description: 'החזיקו לפחות 10,000 ₪ בפיקדון בנקאי.',
     completed: false,
   },
   {
     id: 'm2',
-    title: '2. Galilee-Haifa Buyer Group',
-    regionHint: 'Drive North on Route 2 to Haifa',
-    description: 'Join a 3-person Real Estate Buyer Group (Kvutzat Rechisha) in Haifa & the North.',
-    rewardCash: 5000,
-    rewardRep: 20,
+    title: 'פיזור',
+    regionHint: 'שלוש ערים לפחות',
+    description: 'החזיקו בו-זמנית שלושה סוגי נכסים שונים.',
     completed: false,
   },
   {
     id: 'm3',
-    title: '3. Negev & National Diversification',
-    regionHint: 'Connect Center, North & Negev',
-    description: 'Hold assets across at least 3 regions/categories in your Tik through a macro news event.',
-    rewardCash: 6500,
-    rewardRep: 25,
+    title: 'אופק ארוך',
+    regionHint: 'תל אביב',
+    description: 'החזיקו קרן מחקת מדד לפחות שלוש שנים ברציפות.',
+    completed: false,
+  },
+  {
+    id: 'm4',
+    title: 'ללמוד מהתוצאות',
+    regionHint: 'יומן ההחלטות',
+    description: 'כתבו "מה למדתי" על שתי החלטות לפחות, אחרי שהשנה שלהן הסתיימה.',
     completed: false,
   },
 ];
 
-const MACRO_SCENARIOS: Omit<MacroEvent, 'id' | 'month'>[] = [
-  {
-    originCity: 'JERUSALEM',
-    headline: 'JERUSALEM (BoI): Interest Rate Hiked +0.5% to 4.75%',
-    detail: 'Jerusalem bank deposits earn higher monthly interest; speculative Tel Aviv single stocks dip -6%.',
-    impactType: 'rate_hike',
-  },
-  {
-    originCity: 'TEL AVIV',
-    headline: 'TEL AVIV (TASE): Global Tech Pullback (-9% on Single Stocks)',
-    detail: 'Diversified TA-35/125 indices cushion the drop (-2.5%), proving why diversification beats gambling.',
-    impactType: 'market_dip',
-  },
-  {
-    originCity: 'HAIFA & NORTH',
-    headline: 'HAIFA & NORTH: Port Expansion & High Rental Demand (+4.8%)',
-    detail: 'Northern residential properties and Haifa Buyer Groups receive a rental & equity boost.',
-    impactType: 'north_housing',
-  },
-  {
-    originCity: "BE'ER SHEVA",
-    headline: "BE'ER SHEVA & NEGEV: National Solar & Cyber Grid Surge (+4.5%)",
-    detail: 'Negev clean-energy Co-Ops and regional growth projects post strong shared returns.',
-    impactType: 'negev_solar',
-  },
-  {
-    originCity: 'JERUSALEM',
-    headline: 'JERUSALEM (BoI): Rate Cut -0.25% as Inflation Moderates',
-    detail: 'Lower financing costs boost real estate across Haifa & Tel Aviv and lift broad TASE indices.',
-    impactType: 'rate_cut',
-  },
-];
+function readLitePref(): boolean {
+  try {
+    if (new URLSearchParams(window.location.search).get('lite') === '1') return true;
+    return window.localStorage.getItem('tiktov-lite') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeLitePref(on: boolean) {
+  try {
+    window.localStorage.setItem('tiktov-lite', on ? '1' : '0');
+  } catch {
+    /* storage unavailable: keep the choice for this visit only */
+  }
+}
+
+function fmt(n: number) {
+  return `₪${Math.round(n).toLocaleString('he-IL')}`;
+}
+
+function checkMissions(missions: Mission[], holdings: Holding[], journal: JournalEntry[], year: number): Mission[] {
+  const depositTotal = holdings.filter((h) => h.category === 'bank').reduce((s, h) => s + h.currentValue, 0);
+  const kinds = new Set(holdings.map((h) => h.category)).size;
+  const longIndex = holdings.some((h) => h.category === 'index' && year - h.sinceYear >= 3);
+  const reflections = journal.filter((j) => j.learnedAfter.trim().length >= MIN_REASONING_CHARS).length;
+  return missions.map((m) => {
+    if (m.completed) return m;
+    if (m.id === 'm1' && depositTotal >= 10000) return { ...m, completed: true };
+    if (m.id === 'm2' && kinds >= 3) return { ...m, completed: true };
+    if (m.id === 'm3' && longIndex) return { ...m, completed: true };
+    if (m.id === 'm4' && reflections >= 2) return { ...m, completed: true };
+    return m;
+  });
+}
+
+type TikTab = 'bag' | 'missions' | 'journal' | 'rubric';
 
 interface GameState {
   cash: number;
-  month: number;
-  monthProgress: number;
+  /** The year in which students are currently deciding. LAST_YEAR + 1 means the game is over. */
+  year: number;
   interestRate: number;
+  /** Price level relative to the start of the game (1 = start), to show purchasing power. */
+  priceLevel: number;
   holdings: Holding[];
   journal: JournalEntry[];
   missions: Mission[];
-  currentEvent: MacroEvent;
-  eventHistory: MacroEvent[];
-  personalProsperity: number;
-  nationalProsperity: number;
-  reputation: number;
-  activeCheckInMonths: number[];
+  currentEvent: YearEvent | null;
+  eventHistory: YearEvent[];
+  activeYears: number[];
 
-  // Player & Vehicle world state
   playerPos: [number, number, number];
   playerRot: number;
-  drivingCarId: string | null;
-  cars: CarState[];
   nearbyHub: CityHubId | null;
-  nearbyCarId: string | null;
 
-  // UI Modals
+  liteMode: boolean;
   openHub: CityHubId | null;
   tikOpen: boolean;
-  tikTab: 'bag' | 'missions' | 'journal' | 'rubric';
+  trainOpen: boolean;
+  infoOpen: boolean;
+  tikTab: TikTab;
   toastMessage: string | null;
 
-  // Actions
   setPlayerTransform: (pos: [number, number, number], rot: number) => void;
-  updateCarTransform: (carId: string, x: number, z: number, rotation: number) => void;
-  setNearby: (hub: CityHubId | null, carId: string | null) => void;
-  toggleVehicle: () => void;
+  setNearby: (hub: CityHubId | null) => void;
   setOpenHub: (id: CityHubId | null) => void;
-  setTikOpen: (open: boolean, tab?: 'bag' | 'missions' | 'journal' | 'rubric') => void;
-  setTikTab: (tab: 'bag' | 'missions' | 'journal' | 'rubric') => void;
+  setTikOpen: (open: boolean, tab?: TikTab) => void;
+  setTikTab: (tab: TikTab) => void;
+  setTrainOpen: (open: boolean) => void;
+  setInfoOpen: (open: boolean) => void;
+  setLiteMode: (on: boolean) => void;
+  travelTo: (id: CityHubId) => void;
   clearToast: () => void;
 
-  investAction: (params: {
-    id: string;
-    name: string;
-    region: string;
-    category: Holding['category'];
-    amount: number;
-    monthlyYieldRate: number;
-    riskLevel: Holding['riskLevel'];
-    thoughtBefore: string;
-    isGroupOrCoop?: boolean;
-    partners?: string[];
-  }) => void;
+  investAction: (product: ProductOption, amount: number, thoughtBefore: string) => boolean;
+  sellHolding: (holdingId: string, thoughtBefore: string) => boolean;
+  addReflection: (entryId: string, text: string) => void;
+  advanceYear: () => void;
+  resetGame: () => void;
 
-  sellHolding: (holdingId: string, thoughtBefore: string) => void;
-  tickTime: (deltaSeconds: number) => void;
-  advanceMonth: () => void;
+  isGameOver: () => boolean;
   getNetWorth: () => number;
   getCurrentRegionName: () => string;
   getRubric: () => RubricBreakdown;
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
-  cash: 65000,
-  month: 1,
-  monthProgress: 0,
-  interestRate: 4.25,
-  holdings: [],
-  journal: [
-    {
-      id: 'init-1',
-      month: 1,
-      actionTitle: 'Packed Starter Tik in Central Israel',
-      region: 'Gush Dan',
-      category: 'MILESTONE',
-      amount: 65000,
-      thoughtBefore: 'Instead of gambling on one stock, I will diversify across Israel’s regions and asset types.',
-      learnedAfter: 'Starting with ₪65,000 in my Tik. Jerusalem, Haifa, Tel Aviv, and Be’er Sheva each offer different strengths.',
-    },
-  ],
+const initialGame = () => ({
+  cash: START_CASH,
+  year: FIRST_YEAR,
+  interestRate: START_RATE,
+  priceLevel: 1,
+  holdings: [] as Holding[],
+  journal: [] as JournalEntry[],
   missions: INITIAL_MISSIONS,
-  currentEvent: {
-    id: 'ev-0',
-    month: 1,
-    originCity: 'JERUSALEM',
-    headline: 'BANK OF ISRAEL (JERUSALEM): Policy Rate Holds at 4.25%',
-    detail: 'Drive across Israel to pack your Tik (portfolio) with savings, northern real estate, TASE indices & Negev co-ops.',
-    impactType: 'rate_cut',
-  },
-  eventHistory: [],
-  personalProsperity: 35,
-  nationalProsperity: 30,
-  reputation: 50,
-  activeCheckInMonths: [1],
-
-  playerPos: [-6, 0, -4],
+  currentEvent: null as YearEvent | null,
+  eventHistory: [] as YearEvent[],
+  activeYears: [] as number[],
+  playerPos: [-6, 0, -4] as [number, number, number],
   playerRot: 0,
-  drivingCarId: null,
-  cars: INITIAL_CARS,
-  nearbyHub: null,
-  nearbyCarId: null,
-
-  openHub: null,
+  nearbyHub: null as CityHubId | null,
+  openHub: null as CityHubId | null,
   tikOpen: false,
-  tikTab: 'bag',
-  toastMessage: null,
+  trainOpen: false,
+  infoOpen: false,
+  tikTab: 'bag' as TikTab,
+  toastMessage: null as string | null,
+});
+
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
+  ...initialGame(),
+  liteMode: readLitePref(),
 
   setPlayerTransform: (pos, rot) => set({ playerPos: pos, playerRot: rot }),
-
-  updateCarTransform: (carId, x, z, rotation) =>
-    set((state) => ({
-      cars: state.cars.map((c) => (c.id === carId ? { ...c, x, z, rotation } : c)),
-    })),
-
-  setNearby: (hub, carId) => set({ nearbyHub: hub, nearbyCarId: carId }),
-
-  toggleVehicle: () => {
-    const { drivingCarId, nearbyCarId, cars } = get();
-    if (drivingCarId) {
-      const car = cars.find((c) => c.id === drivingCarId);
-      const exitX = car ? car.x + Math.cos(car.rotation) * 2.5 : -6;
-      const exitZ = car ? car.z - Math.sin(car.rotation) * 2.5 : -4;
-      set({
-        drivingCarId: null,
-        playerPos: [exitX, 0, exitZ],
-        toastMessage: 'Exited car — your Tik is back on your shoulders',
-      });
-    } else if (nearbyCarId) {
-      const car = cars.find((c) => c.id === nearbyCarId);
-      set({
-        drivingCarId: nearbyCarId,
-        toastMessage: `Driving ${car?.name ?? 'Car'} (Tik secured on roof rack) — WASD to drive, E to exit`,
-      });
-    }
+  setNearby: (hub) => {
+    if (get().nearbyHub !== hub) set({ nearbyHub: hub });
   },
-
-  setOpenHub: (id) =>
-    set((state) => ({
-      openHub: id,
-      tikOpen: id ? false : state.tikOpen,
-    })),
-
+  setOpenHub: (id) => set((s) => ({ openHub: id, tikOpen: id ? false : s.tikOpen, trainOpen: false })),
   setTikOpen: (open, tab) =>
-    set((state) => ({
-      tikOpen: open,
-      tikTab: tab ?? state.tikTab,
-      openHub: open ? null : state.openHub,
-    })),
-
+    set((s) => ({ tikOpen: open, tikTab: tab ?? s.tikTab, openHub: open ? null : s.openHub, trainOpen: false })),
   setTikTab: (tab) => set({ tikTab: tab }),
-
+  setTrainOpen: (open) => set({ trainOpen: open, openHub: null, tikOpen: false }),
+  setInfoOpen: (open) => set({ infoOpen: open }),
+  setLiteMode: (on) => {
+    writeLitePref(on);
+    set({ liteMode: on });
+  },
+  travelTo: (id) => {
+    const hub = CITY_HUBS.find((h) => h.id === id)!;
+    set({
+      playerPos: [hub.entryPos[0], 0, hub.entryPos[2]],
+      trainOpen: false,
+      toastMessage: `🚆 הגעתם ל${hub.hebrewName}`,
+    });
+  },
   clearToast: () => set({ toastMessage: null }),
 
-  investAction: ({
-    id,
-    name,
-    region,
-    category,
-    amount,
-    monthlyYieldRate,
-    riskLevel,
-    thoughtBefore,
-    isGroupOrCoop,
-    partners,
-  }) => {
-    const state = get();
-    if (amount <= 0 || state.cash < amount) {
-      set({ toastMessage: 'Insufficient shekels in your Tik for this move.' });
-      return;
+  investAction: (product, amount, thoughtBefore) => {
+    const s = get();
+    if (s.isGameOver()) return false;
+    if (thoughtBefore.trim().length < MIN_REASONING_CHARS) {
+      set({ toastMessage: 'אין החלטה בלי הנמקה: כתבו לפחות משפט אחד ביומן ההחלטות.' });
+      return false;
+    }
+    if (amount <= 0 || amount > s.cash) {
+      set({ toastMessage: 'אין מספיק כסף פנוי בתיק לסכום הזה.' });
+      return false;
     }
 
-    const existing = state.holdings.find((h) => h.id === id);
-    let updatedHoldings: Holding[];
-    if (existing) {
-      updatedHoldings = state.holdings.map((h) =>
-        h.id === id
-          ? {
-              ...h,
-              invested: h.invested + amount,
-              currentValue: h.currentValue + amount,
-            }
-          : h
-      );
-    } else {
-      updatedHoldings = [
-        ...state.holdings,
-        {
-          id,
-          name,
-          region,
-          category,
-          invested: amount,
-          currentValue: amount,
-          monthlyYieldRate,
-          riskLevel,
-          isGroupOrCoop,
-          partners,
-        },
-      ];
-    }
+    const existing = s.holdings.find((h) => h.id === product.id);
+    const holdings: Holding[] = existing
+      ? s.holdings.map((h) =>
+          h.id === product.id ? { ...h, invested: h.invested + amount, currentValue: h.currentValue + amount } : h
+        )
+      : [
+          ...s.holdings,
+          {
+            id: product.id,
+            name: product.name,
+            region: product.region,
+            category: product.category,
+            assetKey: product.assetKey,
+            invested: amount,
+            currentValue: amount,
+            sinceYear: s.year,
+            riskLevel: product.riskLevel,
+            fictional: product.fictional,
+            partners: product.partners,
+          },
+        ];
 
-    const newJournal: JournalEntry = {
+    const entry: JournalEntry = {
       id: `j-${Date.now()}`,
-      month: state.month,
-      actionTitle: `Packed ₪${amount.toLocaleString()} in ${name}`,
-      region,
-      category: category.toUpperCase(),
+      year: s.year,
+      holdingId: product.id,
+      actionTitle: `השקעתי ${fmt(amount)} ב${product.name}`,
+      region: product.region,
+      category: 'קנייה',
       amount,
-      thoughtBefore: thoughtBefore.trim() || `Allocating capital in ${region} to balance regional growth and stability.`,
-      learnedAfter: 'Active in your Tik — outcome updates after the next economic month.',
+      thoughtBefore: thoughtBefore.trim(),
+      learnedAfter: '',
     };
 
-    const activeMonths = state.activeCheckInMonths.includes(state.month)
-      ? state.activeCheckInMonths
-      : [...state.activeCheckInMonths, state.month];
-
-    const nationalBoost = isGroupOrCoop ? 12 : category === 'realestate' ? 7 : 3;
-    const repBoost = isGroupOrCoop ? 10 : 2;
-
-    const bankTotal = updatedHoldings
-      .filter((h) => h.category === 'bank')
-      .reduce((sum, h) => sum + h.currentValue, 0);
-    const hasNorthGroup = updatedHoldings.some((h) => h.id === 'haifa-group');
-
-    let bonusCash = 0;
-    let bonusRep = 0;
-    let completedToast: string | null = null;
-
-    const updatedMissions = state.missions.map((m) => {
-      if (!m.completed && m.id === 'm1' && bankTotal >= 15000) {
-        bonusCash += m.rewardCash;
-        bonusRep += m.rewardRep;
-        completedToast = `Mission Complete: ${m.title} (+₪${m.rewardCash.toLocaleString()})!`;
-        return { ...m, completed: true };
-      }
-      if (!m.completed && m.id === 'm2' && hasNorthGroup) {
-        bonusCash += m.rewardCash;
-        bonusRep += m.rewardRep;
-        completedToast = `Mission Complete: ${m.title} (+₪${m.rewardCash.toLocaleString()})!`;
-        return { ...m, completed: true };
-      }
-      return m;
-    });
-
-    const totalPortfolio = updatedHoldings.reduce((s, h) => s + h.currentValue, 0);
-    const singleStock = updatedHoldings.find(
-      (h) => h.category === 'stock' && totalPortfolio > 0 && h.currentValue / totalPortfolio > 0.35
-    );
+    const journal = [entry, ...s.journal];
+    const total = holdings.reduce((sum, h) => sum + h.currentValue, 0) + s.cash - amount;
+    const big = holdings.find((h) => h.currentValue / total > 0.35 && h.riskLevel === 'גבוה');
 
     set({
-      cash: state.cash - amount + bonusCash,
-      holdings: updatedHoldings,
-      journal: [newJournal, ...state.journal],
-      missions: updatedMissions,
-      activeCheckInMonths: activeMonths,
-      nationalProsperity: Math.min(100, state.nationalProsperity + nationalBoost),
-      reputation: Math.min(100, state.reputation + repBoost + bonusRep),
-      toastMessage:
-        completedToast ??
-        (singleStock
-          ? `Tik Alert: >35% in ${singleStock.name} lowers your Diversification score!`
-          : `Added ${name} (${region}) to your Tik & Decision Journal!`),
+      cash: s.cash - amount,
+      holdings,
+      journal,
+      missions: checkMissions(s.missions, holdings, journal, s.year),
+      activeYears: s.activeYears.includes(s.year) ? s.activeYears : [...s.activeYears, s.year],
+      toastMessage: big
+        ? `שימו לב: יותר מ-35% מהתיק נמצא ב"${big.name}", נכס בסיכון גבוה. זה מוריד את ציון הפיזור.`
+        : `נוסף לתיק: ${product.name}`,
     });
+    return true;
   },
 
   sellHolding: (holdingId, thoughtBefore) => {
-    const state = get();
-    const target = state.holdings.find((h) => h.id === holdingId);
-    if (!target) return;
-
+    const s = get();
+    if (s.isGameOver()) return false;
+    const target = s.holdings.find((h) => h.id === holdingId);
+    if (!target) return false;
+    if (thoughtBefore.trim().length < MIN_REASONING_CHARS) {
+      set({ toastMessage: 'גם מכירה צריכה הנמקה: כתבו ביומן למה אתם מוכרים.' });
+      return false;
+    }
     const proceeds = Math.round(target.currentValue);
     const delta = proceeds - target.invested;
-    const updatedHoldings = state.holdings.filter((h) => h.id !== holdingId);
-
-    const newJournal: JournalEntry = {
+    const entry: JournalEntry = {
       id: `j-${Date.now()}`,
-      month: state.month,
-      actionTitle: `Unpacked ${target.name} for ₪${proceeds.toLocaleString()}`,
+      year: s.year,
+      actionTitle: `מכרתי את ${target.name} תמורת ${fmt(proceeds)}`,
       region: target.region,
-      category: 'EXIT',
+      category: 'מכירה',
       amount: proceeds,
-      thoughtBefore: thoughtBefore.trim() || 'Rebalancing regional exposure in my Tik.',
-      learnedAfter:
+      thoughtBefore: thoughtBefore.trim(),
+      learnedAfter: '',
+      outcomeNote:
         delta >= 0
-          ? `Realized +₪${delta.toLocaleString()} gain through disciplined rebalancing.`
-          : `Realized -₪${Math.abs(delta).toLocaleString()}. Reviewing whether selling early hurt long-term compounding.`,
+          ? `רווח של ${fmt(delta)} לעומת הסכום שהושקע.`
+          : `הפסד של ${fmt(Math.abs(delta))} לעומת הסכום שהושקע.`,
       outcomeDelta: delta,
     };
-
+    const holdings = s.holdings.filter((h) => h.id !== holdingId);
+    const journal = [entry, ...s.journal];
     set({
-      cash: state.cash + proceeds,
-      holdings: updatedHoldings,
-      journal: [newJournal, ...state.journal],
-      toastMessage: `Unpacked ${target.name} (+₪${proceeds.toLocaleString()} cash)`,
+      cash: s.cash + proceeds,
+      holdings,
+      journal,
+      activeYears: s.activeYears.includes(s.year) ? s.activeYears : [...s.activeYears, s.year],
+      toastMessage: `מכרתם את ${target.name}. ${fmt(proceeds)} חזרו לכסף הפנוי.`,
+    });
+    return true;
+  },
+
+  addReflection: (entryId, text) => {
+    const s = get();
+    const journal = s.journal.map((j) => (j.id === entryId ? { ...j, learnedAfter: text.trim() } : j));
+    set({
+      journal,
+      missions: checkMissions(s.missions, s.holdings, journal, s.year),
+      activeYears: s.activeYears.includes(s.year) ? s.activeYears : [...s.activeYears, s.year],
+      toastMessage: 'הרפלקציה נשמרה ביומן.',
     });
   },
 
-  tickTime: (deltaSeconds) => {
-    const state = get();
-    if (state.openHub || state.tikOpen) return;
-    const nextProgress = state.monthProgress + deltaSeconds / 45;
-    if (nextProgress >= 1) {
-      get().advanceMonth();
-    } else {
-      set({ monthProgress: nextProgress });
-    }
-  },
+  advanceYear: () => {
+    const s = get();
+    if (s.isGameOver()) return;
+    const data = yearData(s.year);
+    if (!data) return;
 
-  advanceMonth: () => {
-    const state = get();
-    const nextMonth = state.month + 1;
-    const scenario = MACRO_SCENARIOS[(nextMonth - 2) % MACRO_SCENARIOS.length];
-    const newEvent: MacroEvent = {
-      id: `ev-${nextMonth}`,
-      month: nextMonth,
-      ...scenario,
-    };
+    const holdings = s.holdings.map((h) => ({
+      ...h,
+      currentValue: Math.max(0, Math.round(h.currentValue * (1 + data.returns[h.assetKey] / 100))),
+    }));
 
-    let nextInterestRate = state.interestRate;
-    if (scenario.impactType === 'rate_hike') nextInterestRate = +(state.interestRate + 0.5).toFixed(2);
-    if (scenario.impactType === 'rate_cut') nextInterestRate = Math.max(2.0, +(state.interestRate - 0.25).toFixed(2));
-
-    const updatedHoldings = state.holdings.map((h) => {
-      let rate = h.monthlyYieldRate;
-      if (h.category === 'bank') {
-        rate = nextInterestRate / 100 / 12 + 0.002;
-      } else if (scenario.impactType === 'rate_hike' && h.category === 'stock') {
-        rate -= 0.06;
-      } else if (scenario.impactType === 'market_dip') {
-        if (h.category === 'stock') rate -= 0.09;
-        if (h.category === 'index') rate -= 0.025;
-      } else if (scenario.impactType === 'north_housing' && h.category === 'realestate') {
-        rate += 0.048;
-      } else if (scenario.impactType === 'negev_solar' && (h.category === 'coop' || h.category === 'index')) {
-        rate += 0.045;
-      }
-      if (h.isGroupOrCoop) {
-        rate += 0.008;
-      }
+    const journal = s.journal.map((j) => {
+      if (j.year !== s.year || j.category !== 'קנייה' || j.outcomeNote) return j;
+      const holding = s.holdings.find((h) => h.id === j.holdingId);
+      if (!holding) return j;
+      const r = data.returns[holding.assetKey];
       return {
-        ...h,
-        currentValue: Math.max(100, Math.round(h.currentValue * (1 + rate))),
+        ...j,
+        outcomeNote: `בסוף ${s.year}: ${holding.name} ${r >= 0 ? 'עלה' : 'ירד'} ב-${Math.abs(r).toFixed(1)}%. האינפלציה באותה שנה: ${data.cpi}%.`,
       };
     });
 
-    const updatedJournal = state.journal.map((entry, idx) => {
-      if (idx < 3 && entry.learnedAfter.startsWith('Active in your Tik')) {
-        return {
-          ...entry,
-          learnedAfter: `Navigated Month ${nextMonth} (${scenario.originCity}). Regional diversification protected the Tik.`,
-        };
-      }
-      return entry;
-    });
-
-    const distinctCategories = new Set(updatedHoldings.map((h) => h.category)).size;
-    let bonusCash = 0;
-    let bonusRep = 0;
-    let missionMsg: string | null = null;
-
-    const updatedMissions = state.missions.map((m) => {
-      if (!m.completed && m.id === 'm3' && distinctCategories >= 3) {
-        bonusCash += m.rewardCash;
-        bonusRep += m.rewardRep;
-        missionMsg = `Mission Complete: ${m.title} (+₪${m.rewardCash.toLocaleString()})!`;
-        return { ...m, completed: true };
-      }
-      return m;
-    });
-
-    const netWorth =
-      state.cash + bonusCash + updatedHoldings.reduce((s, h) => s + h.currentValue, 0);
-    const personalProsperity = Math.min(100, Math.round((netWorth / 120000) * 65));
+    const event: YearEvent = { year: data.year, headline: data.headline, detail: data.detail };
+    const nextYear = s.year + 1;
+    const over = s.year >= LAST_YEAR;
 
     set({
-      month: nextMonth,
-      monthProgress: 0,
-      interestRate: nextInterestRate,
-      cash: state.cash + bonusCash,
-      holdings: updatedHoldings,
-      journal: updatedJournal,
-      missions: updatedMissions,
-      currentEvent: newEvent,
-      eventHistory: [state.currentEvent, ...state.eventHistory],
-      personalProsperity,
-      reputation: Math.min(100, state.reputation + bonusRep),
-      toastMessage: missionMsg ?? `Month ${nextMonth} • ${scenario.headline}`,
+      year: nextYear,
+      interestRate: data.boiRateEnd,
+      priceLevel: s.priceLevel * (1 + data.cpi / 100),
+      holdings,
+      journal,
+      missions: checkMissions(s.missions, holdings, journal, nextYear),
+      currentEvent: event,
+      eventHistory: s.currentEvent ? [s.currentEvent, ...s.eventHistory] : s.eventHistory,
+      toastMessage: over ? 'המשחק הסתיים! פתחו את התיק לסיכום.' : `עברנו ל-${nextYear}. ${data.headline}`,
     });
   },
 
+  resetGame: () => set({ ...initialGame() }),
+
+  isGameOver: () => get().year > LAST_YEAR,
+
   getNetWorth: () => {
-    const state = get();
-    return state.cash + state.holdings.reduce((sum, h) => sum + h.currentValue, 0);
+    const s = get();
+    return s.cash + s.holdings.reduce((sum, h) => sum + h.currentValue, 0);
   },
 
   getCurrentRegionName: () => {
     const [x, , z] = get().playerPos;
-    if (z < -18) return 'Haifa & The North (חיפה והצפון)';
-    if (z > 18) return "Be'er Sheva & Negev (באר שבע והנגב)";
-    if (x > 4) return 'Jerusalem & Judean Hills (ירושלים)';
-    return 'Tel Aviv & Coastal Plain (תל אביב וגוש דן)';
+    if (z < -18) return 'חיפה והצפון';
+    if (z > 18) return 'באר שבע והנגב';
+    if (x > 4) return 'ירושלים';
+    return 'תל אביב וגוש דן';
   },
 
   getRubric: () => {
-    const state = get();
-    const totalInvested = state.holdings.reduce((s, h) => s + h.currentValue, 0);
-    const categories = new Set(state.holdings.map((h) => h.category)).size;
+    const s = get();
+    const invested = s.holdings.reduce((sum, h) => sum + h.currentValue, 0);
+    const netWorth = s.cash + invested;
 
-    const reasoning = Math.min(30, state.journal.length * 6);
-
-    const hasSingleStockOverload = state.holdings.some(
-      (h) => h.category === 'stock' && totalInvested > 0 && h.currentValue / totalInvested > 0.35
+    const written = s.journal.filter((j) => j.thoughtBefore.length >= MIN_REASONING_CHARS);
+    const reasoning = Math.min(
+      30,
+      written.reduce((pts, j) => {
+        const rich = j.thoughtBefore.length >= 60 || CONCEPT_WORDS.some((w) => j.thoughtBefore.includes(w));
+        return pts + (rich ? 6 : 3);
+      }, 0)
     );
-    let diversification = Math.min(20, categories * 5);
-    if (hasSingleStockOverload) diversification = Math.max(4, diversification - 10);
 
-    const netWorth = state.cash + totalInvested;
-    const growthPct = ((netWorth - 65000) / 65000) * 100;
-    const riskAdjusted = Math.max(5, Math.min(20, Math.round(12 + growthPct * 0.6)));
+    const kinds = new Set(s.holdings.map((h) => h.category)).size;
+    let diversification = Math.min(20, kinds * 5);
+    const overloaded = s.holdings.some((h) => netWorth > 0 && h.currentValue / netWorth > 0.35 && h.riskLevel === 'גבוה');
+    if (overloaded) diversification = Math.max(0, diversification - 10);
 
-    const completedLessons = state.journal.filter(
-      (j) => !j.learnedAfter.startsWith('Active in your Tik')
-    ).length;
-    const learning = Math.min(15, completedLessons * 5);
+    const realGrowth = (netWorth / s.priceLevel / START_CASH - 1) * 100;
+    let riskAdjusted = Math.round(10 + realGrowth * 0.4);
+    if (overloaded) riskAdjusted -= 5;
+    riskAdjusted = Math.max(0, Math.min(20, riskAdjusted));
+    if (s.holdings.length === 0 && s.journal.length === 0) riskAdjusted = 0;
 
-    const consistency = Math.min(15, state.activeCheckInMonths.length * 5);
+    const reflections = s.journal.filter((j) => j.learnedAfter.trim().length >= MIN_REASONING_CHARS).length;
+    const learning = Math.min(15, reflections * 5);
+
+    const consistency = Math.min(15, s.activeYears.length * 2);
 
     return {
       reasoning,
@@ -568,4 +537,29 @@ export const useGameStore = create<GameState>((set, get) => ({
       total: reasoning + diversification + riskAdjusted + learning + consistency,
     };
   },
-}));
+}),
+    {
+      name: 'tiktov-game-v1',
+      // Progress stays only on this device (browser storage). Nothing is sent anywhere.
+      storage: createJSONStorage(() => {
+        try {
+          return window.localStorage;
+        } catch {
+          return undefined as unknown as Storage;
+        }
+      }),
+      partialize: (s) => ({
+        cash: s.cash,
+        year: s.year,
+        interestRate: s.interestRate,
+        priceLevel: s.priceLevel,
+        holdings: s.holdings,
+        journal: s.journal,
+        missions: s.missions,
+        currentEvent: s.currentEvent,
+        eventHistory: s.eventHistory,
+        activeYears: s.activeYears,
+      }),
+    }
+  )
+);
