@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack, RotateCcw, PieChart } from 'lucide-react';
-import { MIN_REASONING_CHARS, STAGES, stageInfo, useGameStore } from '../../store/gameStore';
+import { MIN_REASONING_CHARS, isReasonOk, STAGES, stageInfo, useGameStore } from '../../store/gameStore';
 import { composition } from '../../data/composition';
 import { Donut, MixByYear, MixLegend } from './Composition';
 import { FIRST_YEAR } from '../../data/history';
@@ -20,7 +20,7 @@ const ReflectionBox: React.FC<{ entryId: string }> = ({ entryId }) => {
       />
       <button
         className="btn-mini"
-        disabled={text.trim().length < MIN_REASONING_CHARS}
+        disabled={!isReasonOk(text)}
         onClick={() => addReflection(entryId, text)}
       >
         שמירה

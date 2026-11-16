@@ -71,6 +71,12 @@ export const stageInfo = (n: StageNum) => STAGES[n - 1];
 /** The stage a city belongs to (Be'er Sheva has only a summer job). */
 export const cityStage = (id: CityHubId): StageNum | null => STAGES.find((st) => st.city === id)?.n ?? null;
 export const MIN_REASONING_CHARS = 15;
+/** Letters typed (Hebrew or English), ignoring symbols like "////". */
+export const letterCount = (t: string) => (t.match(/\p{L}/gu) ?? []).length;
+/** A real sentence: enough letters and at least three words. */
+export const isReasonOk = (t: string) =>
+  letterCount(t) >= MIN_REASONING_CHARS && t.trim().split(/\s+/).filter((w) => /\p{L}/u.test(w)).length >= 3;
+
 const CONCEPT_WORDS = ['סיכון', 'פיזור', 'ריבית', 'אינפלציה', 'טווח', 'תשואה', 'נזיל', 'מדד', 'שכירות', 'הפסד', 'ארוך', 'קצר'];
 
 export const CITY_HUBS: CityHubInfo[] = [
@@ -399,7 +405,7 @@ function checkMissions(missions: Mission[], holdings: Holding[], journal: Journa
   const depositTotal = holdings.filter((h) => h.category === 'bank').reduce((s, h) => s + h.currentValue, 0);
   const keys = new Set(holdings.map((h) => h.assetKey));
   const longIndex = holdings.some((h) => h.category === 'index' && year - h.sinceYear >= 3);
-  const reflections = journal.filter((j) => j.learnedAfter.trim().length >= MIN_REASONING_CHARS).length;
+  const reflections = journal.filter((j) => isReasonOk(j.learnedAfter)).length;
   const invested = holdings.reduce((s, h) => s + h.currentValue, 0);
   const net = invested + cash;
   const stockShare = net > 0 ? holdings.filter((h) => h.category === 'stock').reduce((s, h) => s + h.currentValue, 0) / net : 0;
@@ -662,7 +668,7 @@ export const useGameStore = create<GameState>()(
       set({ toastMessage: 'האפיק הזה לא שייך לשלב הנוכחי.' });
       return false;
     }
-    if (thoughtBefore.trim().length < MIN_REASONING_CHARS) {
+    if (!isReasonOk(thoughtBefore)) {
       set({ toastMessage: 'אין החלטה בלי הנמקה: כתבו לפחות משפט אחד ביומן ההחלטות.' });
       return false;
     }
@@ -727,7 +733,7 @@ export const useGameStore = create<GameState>()(
     if (s.isGameOver()) return false;
     const target = s.holdings.find((h) => h.id === holdingId);
     if (!target) return false;
-    if (thoughtBefore.trim().length < MIN_REASONING_CHARS) {
+    if (!isReasonOk(thoughtBefore)) {
       set({ toastMessage: 'גם מכירה צריכה הנמקה: כתבו ביומן למה אתם מוכרים.' });
       return false;
     }
@@ -905,7 +911,7 @@ export const useGameStore = create<GameState>()(
     const invested = s.holdings.reduce((sum, h) => sum + h.currentValue, 0);
     const netWorth = s.cash + invested;
 
-    const written = s.journal.filter((j) => j.thoughtBefore.length >= MIN_REASONING_CHARS);
+    const written = s.journal.filter((j) => isReasonOk(j.thoughtBefore));
     const reasoning = Math.min(
       30,
       written.reduce((pts, j) => {
@@ -927,7 +933,7 @@ export const useGameStore = create<GameState>()(
     riskAdjusted = Math.max(0, Math.min(20, riskAdjusted));
     if (s.holdings.length === 0 && s.journal.length === 0) riskAdjusted = 0;
 
-    const reflections = s.journal.filter((j) => j.learnedAfter.trim().length >= MIN_REASONING_CHARS).length;
+    const reflections = s.journal.filter((j) => isReasonOk(j.learnedAfter)).length;
     const learning = Math.min(15, reflections * 5);
 
     const consistency = Math.min(15, s.activeYears.length * 2);

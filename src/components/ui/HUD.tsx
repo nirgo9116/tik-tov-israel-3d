@@ -161,7 +161,14 @@ export const HUD: React.FC = () => {
             </>
           )}
         </div>
-        <button className="btn-mini" onClick={advanceYear} disabled={over} title="המורה מקדם את הכיתה לשנה הבאה">
+        <button
+          className="btn-mini"
+          onClick={() => {
+            if (window.confirm(`למורה: לעבור לשנה הבאה? התוצאות של ${Math.min(year, 2024)} יחושבו, ואי אפשר לחזור אחורה.`)) advanceYear();
+          }}
+          disabled={over}
+          title="המורה מקדם את הכיתה לשנה הבאה"
+        >
           <FastForward size={14} /> {year >= LAST_YEAR ? 'סיום המשחק' : 'לשנה הבאה'}
         </button>
       </div>

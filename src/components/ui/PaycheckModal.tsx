@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Wallet } from 'lucide-react';
-import { JOBS, MIN_REASONING_CHARS, useGameStore } from '../../store/gameStore';
+import { JOBS, MIN_REASONING_CHARS, isReasonOk, useGameStore } from '../../store/gameStore';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 
@@ -14,7 +14,7 @@ export const PaycheckModal: React.FC = () => {
   const job = JOBS.find((j) => j.id === paycheck.jobId)!;
   const keep = saved ?? Math.round(paycheck.pay / 2 / 100) * 100;
   const spend = paycheck.pay - keep;
-  const ok = note.trim().length >= MIN_REASONING_CHARS;
+  const ok = isReasonOk(note);
   return (
     <div className="modal-backdrop">
       <div className="modal-card paycheck-card" role="dialog" aria-label="משכורת">

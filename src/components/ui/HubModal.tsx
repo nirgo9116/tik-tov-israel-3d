@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Users, AlertTriangle, CheckCircle2, MapPin, FlaskConical, Briefcase } from 'lucide-react';
-import { CITY_HUBS, HUB_PRODUCTS, JOBS, MIN_REASONING_CHARS, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, HUB_PRODUCTS, JOBS, MIN_REASONING_CHARS, isReasonOk, letterCount, useGameStore } from '../../store/gameStore';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 const riskClass: Record<string, string> = { נמוך: 'low', בינוני: 'medium', גבוה: 'high' };
@@ -18,6 +18,7 @@ export const HubModal: React.FC = () => {
   const jobYear = useGameStore((s) => s.jobYear);
   const liteMode = useGameStore((s) => s.liteMode);
   const startJob = useGameStore((s) => s.startJob);
+  const resetGame = useGameStore((s) => s.resetGame);
   const finishJobNow = useGameStore((s) => s.finishJobNow);
 
   const [thought, setThought] = useState('');
@@ -31,8 +32,8 @@ export const HubModal: React.FC = () => {
   const productIds = new Set(products.map((p) => p.id));
   const relevant = holdings.filter((h) => productIds.has(h.id));
   const over = isGameOver();
-  const typed = thought.trim().length;
-  const reasonOk = typed >= MIN_REASONING_CHARS;
+  const typed = letterCount(thought);
+  const reasonOk = isReasonOk(thought);
   const round = (n: number) => Math.max(0, Math.floor(n / 1000) * 1000);
 
   return (
@@ -67,6 +68,15 @@ export const HubModal: React.FC = () => {
           </button>
         </div>
 
+        {over && (
+          <div className="stage-over-box" role="alert">
+            <b>השלב הזה הסתיים (2017–2024), ולכן אי אפשר להשקיע בו יותר.</b> המורה פותח את השלב הבא במסך "למורה". אפשר גם לשחק את השלב מחדש.
+            <button className="btn-mini" onClick={() => { if (window.confirm('להתחיל את השלב מחדש? ההשקעות בשלב הזה יימחקו.')) resetGame(); }}>
+              לשחק את השלב מחדש
+            </button>
+          </div>
+        )}
+
         <ol className="invest-steps">
           <li className={reasonOk ? 'ok' : 'now'}>כותבים נימוק</li>
           <li className={reasonOk ? 'now' : ''}>בוחרים סכום</li>
@@ -84,7 +94,7 @@ export const HubModal: React.FC = () => {
 
         <div className="journal-prompt-box">
           <label htmlFor="reason">
-            1. יומן ההחלטות: למה אתם מחליטים כך, ומה לדעתכם יקרה ב-{year}? (חובה, לפחות משפט אחד)
+            1. יומן ההחלטות: למה אתם מחליטים כך, ומה לדעתכם יקרה ב-{Math.min(year, 2024)}? (חובה, לפחות משפט אחד)
           </label>
           <textarea
             id="reason"
@@ -97,7 +107,7 @@ export const HubModal: React.FC = () => {
             <div className="reason-meter-fill" style={{ width: `${Math.min(100, (typed / MIN_REASONING_CHARS) * 100)}%`, background: reasonOk ? '#22c55e' : '#f59e0b' }} />
           </div>
           <div className="hint-small">
-            {reasonOk ? '✓ הנימוק מוכן. עכשיו בוחרים סכום ולוחצים "השקעה".' : `עוד ${MIN_REASONING_CHARS - typed} תווים לפחות. אפשר להשתמש במילים כמו סיכון, פיזור, ריבית, אינפלציה.`}
+            {reasonOk ? '✓ הנימוק מוכן. עכשיו בוחרים סכום ולוחצים "השקעה".' : typed >= MIN_REASONING_CHARS ? 'כתבו משפט של שלוש מילים לפחות.' : `עוד ${MIN_REASONING_CHARS - typed} אותיות לפחות (סימנים לא נספרים). אפשר להשתמש במילים כמו סיכון, פיזור, ריבית, אינפלציה.`}
           </div>
         </div>
 
