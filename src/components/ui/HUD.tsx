@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles, Briefcase, Coins } from 'lucide-react';
-import { CITY_HUBS, JOBS, cityStage, stageInfo, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, JOBS, cityStage, hasWebGL, stageInfo, useGameStore } from '../../store/gameStore';
 import { INTERIORS } from '../../data/interiors';
 import { runStation } from './stations';
 import { composition } from '../../data/composition';
@@ -12,6 +12,7 @@ const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 export const HUD: React.FC = () => {
   const cash = useGameStore((s) => s.cash);
   const holdings = useGameStore((s) => s.holdings);
+  const journal = useGameStore((s) => s.journal);
   const year = useGameStore((s) => s.year);
   const interestRate = useGameStore((s) => s.interestRate);
   const priceLevel = useGameStore((s) => s.priceLevel);
@@ -62,6 +63,12 @@ export const HUD: React.FC = () => {
   const st = stageInfo(stage);
   const roundNo = Math.min(year, LAST_YEAR) - FIRST_YEAR + 1;
   const rounds = LAST_YEAR - FIRST_YEAR + 1;
+
+  const [hintOpen, setHintOpen] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setHintOpen(false), 45000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -130,7 +137,8 @@ export const HUD: React.FC = () => {
           <button
             className="btn-mini"
             onClick={() => setLiteMode(!liteMode)}
-            title={liteMode ? 'מעבר לתצוגת תלת-ממד' : 'גרסה קלה למחשבים חלשים'}
+            disabled={liteMode && !hasWebGL()}
+            title={liteMode ? (hasWebGL() ? 'מעבר לתצוגת תלת-ממד' : 'המחשב הזה לא תומך בתלת-ממד') : 'גרסה קלה למחשבים חלשים'}
           >
             {liteMode ? <Box size={14} /> : <Monitor size={14} />} {liteMode ? 'תלת-ממד' : 'גרסה קלה'}
           </button>
@@ -159,6 +167,40 @@ export const HUD: React.FC = () => {
       </div>
 
       {toastMessage && !activeJob && <div className="toast-pill">{toastMessage}</div>}
+
+      {!toastMessage && !activeJob && (() => {
+        // "What now?": one clear next step, worked out from the game state
+        const bought = journal.some((j) => j.year === year && j.category === 'קנייה');
+        const pending = journal.find((j) => j.outcomeNote && !j.learnedAfter.trim());
+        let text: string;
+        let action: { label: string; run: () => void } | null = null;
+        if (over) {
+          text = stage < 3 ? `${st.name} הסתיים. פתחו את התיק לסיכום, וחכו שהמורה יפתח את השלב הבא.` : 'המשחק הסתיים! פתחו את התיק להשוואה בין שלושת העולמות.';
+          action = { label: 'לסיכום', run: () => setTikOpen(true, 'bag') };
+        } else if (pending) {
+          text = `יש תוצאה חדשה: כתבו "מה למדתי" על ההחלטה מ-${pending.year}.`;
+          action = { label: 'ליומן', run: () => setTikOpen(true, 'journal') };
+        } else if (!bought && cash >= 1000) {
+          text = `מה עכשיו? מחליטים איפה להשקיע ב-${year}: כותבים נימוק, בוחרים סכום ולוחצים "השקעה".`;
+          action = { label: 'להשקעה', run: () => setOpenHub(st.city) };
+        } else if (canWork) {
+          text = 'השקעתם השנה. רוצים להרוויח עוד? אפשר לעבוד בקיץ פעם אחת בשנה.';
+          action = { label: 'עבודה בקיץ', run: () => setJobsOpen(true) };
+        } else {
+          text = 'סיימתם את השנה. מחכים שהמורה ילחץ "לשנה הבאה", ואז רואים מה קרה באמת.';
+        }
+        return (
+          <div className="coach-pill" role="status">
+            <span className="coach-tag">הצעד הבא</span>
+            <span>{text}</span>
+            {action && (
+              <button className="btn-mini coach-btn" onClick={action.run}>
+                {action.label}
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {activeJob && (() => {
         const job = JOBS.find((j) => j.id === activeJob.jobId)!;
@@ -273,21 +315,31 @@ export const HUD: React.FC = () => {
       )}
 
       <div className="bottom-right-actions">
-        {!liteMode && interior && (
-          <div className="controls-hint">
-            <b>WASD / חיצים</b> הליכה • <b>E</b> שימוש בעמדה • <b>Esc</b> יציאה מהבניין • <b>I</b> השקעה • <b>P</b> התיק שלי
-          </div>
+        {!liteMode && (
+          hintOpen ? (
+            <div className="controls-hint" onClick={() => setHintOpen(false)} title="לחצו כדי להסתיר">
+              {interior ? (
+                <>
+                  <b>הליכה:</b> חיצים / WASD, או לחיצה על הרצפה • <b>E</b> שימוש בעמדה • <b>Esc</b> יציאה • <b>I</b> השקעה • <b>P</b> התיק
+                </>
+              ) : (
+                <>
+                  <b>הליכה:</b> חיצים / WASD, או לחיצה על הקרקע • <b>Enter</b> כניסה לבניין • <b>I</b> השקעה • <b>P</b> התיק • <b>M</b> מפה • <b>T</b> רכבת • <b>J</b> עבודה • גלגלת: זום
+                </>
+              )}
+              <span className="hint-x">✕</span>
+            </div>
+          ) : (
+            <button className="btn-mini hint-toggle" onClick={() => setHintOpen(true)}>
+              ⌨ מקשים
+            </button>
+          )
         )}
         {!liteMode && interior && (
           <button className="phone-fab exit-fab" onClick={exitBuilding}>
             <MapPin size={20} />
             <span>יציאה מהבניין (Esc)</span>
           </button>
-        )}
-        {!liteMode && !interior && (
-          <div className="controls-hint">
-            <b>WASD / חיצים</b> הליכה • <b>גלגלת או + / -</b> זום • <b>M</b> כל הארץ • <b>Enter</b> כניסה לעיר • <b>E</b> עבודה • <b>T</b> רכבת • <b>I</b> השקעה • <b>P</b> התיק שלי
-          </div>
         )}
         {!liteMode && !interior && (
           <button className="phone-fab map-fab" onClick={() => setOverview(!overview)}>
@@ -307,7 +359,7 @@ export const HUD: React.FC = () => {
           <span>עבודה בקיץ (J)</span>
         </button>
         )}
-        <button className="phone-fab invest-fab" style={{ background: st.color }} onClick={() => setOpenHub(st.city)} title={`פותח את מסך ההשקעה של ${st.name}`}>
+        <button className="phone-fab invest-fab primary-fab" style={{ background: st.color }} onClick={() => setOpenHub(st.city)} title={`פותח את מסך ההשקעה של ${st.name}`}>
           <Coins size={20} />
           <span>השקעה (I)</span>
         </button>

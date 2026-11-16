@@ -832,3 +832,30 @@ body { direction: rtl; }
 .hud-mix .mix-bar { flex: 1; }
 .hud-mix { position: fixed; left: 16px; bottom: 204px; width: 260px; font-family: inherit; z-index: 5; }
 .hud-mix.hud-mix-low { bottom: 16px; }
+.invest-steps { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 10px 0; counter-reset: st; font-size: 12px; }
+.invest-steps li { counter-increment: st; background: #1e293b; border: 1px solid #334155; border-radius: 999px; padding: 4px 10px; color: #94a3b8; }
+.invest-steps li::before { content: counter(st) ". "; font-weight: 800; }
+.invest-steps li.now { border-color: #facc15; color: #fef9c3; }
+.invest-steps li.ok { border-color: #22c55e; color: #bbf7d0; }
+.invest-steps li.ok::before { content: "✓ "; }
+.invest-steps li.cash-left { margin-inline-start: auto; color: #f8fafc; border-color: #10b981; }
+.invest-steps li.cash-left::before { content: none; }
+.invest-done { display: flex; gap: 8px; align-items: center; background: #14532d; border: 1px solid #22c55e; border-radius: 10px; padding: 8px 12px; font-size: 13px; margin-bottom: 8px; }
+.reason-meter { height: 5px; background: #1e293b; border-radius: 999px; overflow: hidden; margin-top: 6px; }
+.reason-meter-fill { height: 100%; transition: width 0.2s; }
+.amount-chips { display: flex; gap: 4px; width: 100%; }
+.chip { flex: 1; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 4px 0; font-size: 12px; font-family: inherit; cursor: pointer; }
+.chip.on { border-color: #facc15; color: #fef9c3; }
+.chip:disabled { opacity: 0.4; cursor: default; }
+.product-footer { flex-wrap: wrap; }
+.coach-pill {
+  position: fixed; top: 118px; left: 50%; transform: translateX(-50%); z-index: 6;
+  display: flex; align-items: center; gap: 10px; pointer-events: auto; max-width: min(760px, 92vw);
+  background: rgba(15, 23, 42, 0.94); border: 1px solid #facc15; border-radius: 999px; padding: 6px 8px 6px 14px; font-size: 13px; color: #f8fafc;
+}
+.coach-tag { background: #facc15; color: #0f172a; font-weight: 800; border-radius: 999px; padding: 2px 10px; font-size: 11px; white-space: nowrap; }
+.coach-btn { background: #facc15 !important; color: #0f172a !important; font-weight: 800; white-space: nowrap; }
+.controls-hint { cursor: pointer; }
+.hint-x { margin-inline-start: 8px; opacity: 0.6; }
+.hint-toggle { align-self: flex-end; pointer-events: auto; }
+.primary-fab { font-size: 16px !important; padding: 12px 20px !important; box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }

@@ -217,7 +217,7 @@ export const JobStands: React.FC = () => {
           </mesh>
           <NearSign min={10} max={26}>
             <Billboard position={[0, 4.7, 0]}>
-              <Text font={HEBREW_FONT} direction="rtl" fontSize={0.45} color="#bbf7d0" outlineWidth={0.06} outlineColor="#052e16" textAlign="center">
+              <Text font={HEBREW_FONT} direction="rtl" fontSize={0.35} color="#bbf7d0" outlineWidth={0.06} outlineColor="#052e16" textAlign="center">
                 {available ? `עבודה בקיץ: ${shekel(job.pay)}` : 'עבדתם השנה'}
               </Text>
             </Billboard>

@@ -10,6 +10,7 @@ import { Railway, Train, Traffic } from './components/world/Transport';
 import { TrainRideBanner } from './components/ui/TrainRideBanner';
 import { InteriorScene } from './components/world/InteriorScene';
 import { StageTower } from './components/world/PortfolioTower';
+import { WalkMarker, WalkPlane } from './components/world/WalkTarget';
 import { StationInfoModal } from './components/ui/StationInfoModal';
 import { StageIntroModal } from './components/ui/StageIntroModal';
 import { runStation } from './components/ui/stations';
@@ -94,6 +95,8 @@ export const App: React.FC = () => {
             {interior ? (
               <>
                 <InteriorScene id={interior} />
+                <WalkPlane size={[20, 14]} />
+                <WalkMarker />
                 <PlayerWithTik />
               </>
             ) : (
@@ -108,6 +111,8 @@ export const App: React.FC = () => {
             <Train />
             <Traffic />
             <StageTower />
+            <WalkPlane size={[60, 100]} />
+            <WalkMarker />
             </>
             )}
           </Suspense>

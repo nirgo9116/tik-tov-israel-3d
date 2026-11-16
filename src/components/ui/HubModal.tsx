@@ -22,6 +22,7 @@ export const HubModal: React.FC = () => {
 
   const [thought, setThought] = useState('');
   const [amounts, setAmounts] = useState<Record<string, number>>({});
+  const [done, setDone] = useState<string | null>(null);
 
   if (!openHub) return null;
 
@@ -30,10 +31,18 @@ export const HubModal: React.FC = () => {
   const productIds = new Set(products.map((p) => p.id));
   const relevant = holdings.filter((h) => productIds.has(h.id));
   const over = isGameOver();
-  const reasonOk = thought.trim().length >= MIN_REASONING_CHARS;
+  const typed = thought.trim().length;
+  const reasonOk = typed >= MIN_REASONING_CHARS;
+  const round = (n: number) => Math.max(0, Math.floor(n / 1000) * 1000);
 
   return (
-    <div className="modal-backdrop" onClick={() => setOpenHub(null)}>
+    <div
+      className="modal-backdrop"
+      onClick={() => {
+        setDone(null);
+        setOpenHub(null);
+      }}
+    >
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ borderColor: info.color }}>
           <div>
@@ -46,14 +55,36 @@ export const HubModal: React.FC = () => {
             </h2>
             <p className="modal-sub">{info.subtitle}</p>
           </div>
-          <button className="icon-close" onClick={() => setOpenHub(null)} aria-label="סגירה">
+          <button
+            className="icon-close"
+            onClick={() => {
+              setDone(null);
+              setOpenHub(null);
+            }}
+            aria-label="סגירה"
+          >
             <X size={20} />
           </button>
         </div>
 
+        <ol className="invest-steps">
+          <li className={reasonOk ? 'ok' : 'now'}>כותבים נימוק</li>
+          <li className={reasonOk ? 'now' : ''}>בוחרים סכום</li>
+          <li className={reasonOk ? 'now' : ''}>לוחצים "השקעה"</li>
+          <li className="cash-left">
+            כסף פנוי: <b>{shekel(cash)}</b>
+          </li>
+        </ol>
+
+        {done && (
+          <div className="invest-done" role="status">
+            <CheckCircle2 size={16} /> {done}
+          </div>
+        )}
+
         <div className="journal-prompt-box">
           <label htmlFor="reason">
-            יומן ההחלטות: למה אתם מחליטים כך, ומה לדעתכם יקרה ב-{year}? (חובה, לפחות משפט אחד)
+            1. יומן ההחלטות: למה אתם מחליטים כך, ומה לדעתכם יקרה ב-{year}? (חובה, לפחות משפט אחד)
           </label>
           <textarea
             id="reason"
@@ -62,9 +93,12 @@ export const HubModal: React.FC = () => {
             onChange={(e) => setThought(e.target.value)}
             placeholder="לדוגמה: אני משקיע בקרן מחקת מדד כי יש בה פיזור, ואני מוכן לחכות כמה שנים גם אם תהיה ירידה."
           />
-          {!reasonOk && thought.length > 0 && (
-            <div className="hint-small">עוד קצת: כתבו לפחות {MIN_REASONING_CHARS} תווים.</div>
-          )}
+          <div className="reason-meter">
+            <div className="reason-meter-fill" style={{ width: `${Math.min(100, (typed / MIN_REASONING_CHARS) * 100)}%`, background: reasonOk ? '#22c55e' : '#f59e0b' }} />
+          </div>
+          <div className="hint-small">
+            {reasonOk ? '✓ הנימוק מוכן. עכשיו בוחרים סכום ולוחצים "השקעה".' : `עוד ${MIN_REASONING_CHARS - typed} תווים לפחות. אפשר להשתמש במילים כמו סיכון, פיזור, ריבית, אינפלציה.`}
+          </div>
         </div>
 
         <div className="products-grid">
@@ -95,8 +129,20 @@ export const HubModal: React.FC = () => {
                   </div>
                 )}
                 <div className="product-footer">
+                  <div className="amount-chips" aria-label="סכום מהיר">
+                    {[
+                      ['10%', round(cash * 0.1)],
+                      ['25%', round(cash * 0.25)],
+                      ['חצי', round(cash * 0.5)],
+                      ['הכול', round(cash)],
+                    ].map(([label, v]) => (
+                      <button key={label as string} type="button" className={`chip${amount === v ? ' on' : ''}`} disabled={(v as number) < 1000} onClick={() => setAmounts({ ...amounts, [p.id]: v as number })}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   <label className="amount-input">
-                    סכום (₪)
+                    2. סכום (₪)
                     <input
                       type="number"
                       min={1000}
@@ -111,10 +157,13 @@ export const HubModal: React.FC = () => {
                     disabled={over || !valid || !reasonOk}
                     title={!reasonOk ? 'קודם כותבים הנמקה ביומן' : undefined}
                     onClick={() => {
-                      if (investAction(p, amount, thought)) setThought('');
+                      if (investAction(p, amount, thought)) {
+                        setThought('');
+                        setDone(`הושקעו ${shekel(amount)} ב${p.name}. רואים את זה בתיק ובהרכב התיק. אפשר להשקיע עוד (עם נימוק חדש) או לסגור.`);
+                      }
                     }}
                   >
-                    {!valid ? 'סכום לא תקין' : `השקעה של ${shekel(amount)}`}
+                    {over ? 'השלב הסתיים' : !reasonOk ? 'קודם כותבים נימוק' : !valid ? (cash < 1000 ? 'אין מספיק כסף פנוי' : 'סכום לא תקין') : `3. השקעה של ${shekel(amount)}`}
                   </button>
                 </div>
               </div>
@@ -166,10 +215,13 @@ export const HubModal: React.FC = () => {
                   disabled={over || !reasonOk}
                   title={!reasonOk ? 'גם מכירה צריכה הנמקה ביומן' : undefined}
                   onClick={() => {
-                    if (sellHolding(h.id, thought)) setThought('');
+                    if (sellHolding(h.id, thought)) {
+                      setThought('');
+                      setDone(`מכרתם את ${h.name}. הכסף חזר לכסף הפנוי.`);
+                    }
                   }}
                 >
-                  מכירה
+                  {reasonOk ? 'מכירה' : 'מכירה (קודם נימוק)'}
                 </button>
               </div>
             ))}

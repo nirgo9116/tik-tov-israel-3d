@@ -8,6 +8,7 @@ import { INTERIORS, ROOM_HALF_D, ROOM_HALF_W, Station } from '../../data/interio
 import type { CityHubId } from '../../types/game';
 import { HEBREW_FONT } from '../../fonts';
 import { Npc } from './JobMarkers';
+import { runStation } from '../ui/stations';
 import { PortfolioTower } from './PortfolioTower';
 
 const H = 4.6; // ceiling height
@@ -93,7 +94,16 @@ const StationMarker: React.FC<{ station: Station; accent: string }> = ({ station
   });
   const color = station.action.kind === 'exit' ? '#22c55e' : station.action.kind === 'invest' ? '#facc15' : accent;
   return (
-    <group position={[station.pos[0], 0, station.pos[1]]}>
+    <group
+      position={[station.pos[0], 0, station.pos[1]]}
+      onClick={(e) => {
+        // Click a station: use it when standing on it, otherwise walk there
+        e.stopPropagation();
+        const s = useGameStore.getState();
+        if (s.nearbyStation === station.id && s.interior) runStation(s.interior, station.id);
+        else s.setMoveTarget(station.pos);
+      }}
+    >
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <ringGeometry args={[0.75, 1.0, 6]} />
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={near ? 1.4 : 0.6} />

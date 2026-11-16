@@ -331,7 +331,18 @@ export interface ActiveJob {
   done: number;
 }
 
+/** True when this browser can draw 3D (WebGL). */
+export function hasWebGL(): boolean {
+  try {
+    const c = document.createElement('canvas');
+    return Boolean(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
 function readLitePref(): boolean {
+  if (!hasWebGL()) return true; // no 3D support: start in the light version
   try {
     if (new URLSearchParams(window.location.search).get('lite') === '1') return true;
     return window.localStorage.getItem('tiktov-lite') === '1';
@@ -451,6 +462,9 @@ interface GameState {
   /** The building the player is inside (3D mode), or null when outside. */
   interior: CityHubId | null;
   nearbyStation: string | null;
+  /** Click/tap-to-walk destination [x, z]. */
+  moveTarget: [number, number] | null;
+  setMoveTarget: (t: [number, number] | null) => void;
   /** An info station whose panel is open. */
   stationInfo: string | null;
 
@@ -531,6 +545,7 @@ const initialGame = (stage: StageNum = 1) => ({
   trainRide: null as { to: CityHubId; path: Array<[number, number]>; thenJob?: string } | null,
   interior: null as CityHubId | null,
   nearbyStation: null as string | null,
+  moveTarget: null as [number, number] | null,
   stationInfo: null as string | null,
   openHub: null as CityHubId | null,
   tikOpen: false,
@@ -578,7 +593,7 @@ export const useGameStore = create<GameState>()(
       set({ toastMessage: lockedMessage(id, get().stage) });
       return;
     }
-    set({ interior: id, playerPos: [0, 0, 3.4], playerRot: Math.PI, overview: false, openHub: null, nearbyHub: null, nearbyJob: null, toastMessage: `נכנסתם: ${hub.hubTitle}` });
+    set({ moveTarget: null, interior: id, playerPos: [0, 0, 3.4], playerRot: Math.PI, overview: false, openHub: null, nearbyHub: null, nearbyJob: null, toastMessage: `נכנסתם: ${hub.hubTitle}` });
   },
   exitBuilding: () => {
     const id = get().interior;
@@ -587,12 +602,13 @@ export const useGameStore = create<GameState>()(
     const [ex, , ez] = hub.entryPos;
     const [cx, , cz] = hub.position;
     // Stand on the entry pad, facing away from the building
-    set({ interior: null, nearbyStation: null, stationInfo: null, openHub: null, playerPos: [ex, 0, ez], playerRot: Math.atan2(ex - cx, ez - cz) });
+    set({ moveTarget: null, interior: null, nearbyStation: null, stationInfo: null, openHub: null, playerPos: [ex, 0, ez], playerRot: Math.atan2(ex - cx, ez - cz) });
   },
   setNearbyStation: (id) => {
     if (get().nearbyStation !== id) set({ nearbyStation: id });
   },
   setStationInfo: (id) => set({ stationInfo: id }),
+  setMoveTarget: (t) => set({ moveTarget: t }),
   finishTrainRide: () => {
     const ride = get().trainRide;
     if (!ride) return;
@@ -631,6 +647,7 @@ export const useGameStore = create<GameState>()(
     const hub = CITY_HUBS.find((h) => h.id === id)!;
     set({
       playerPos: [hub.entryPos[0], 0, hub.entryPos[2]],
+      moveTarget: null,
       trainOpen: false,
       toastMessage: `🚆 הגעתם ל${hub.hebrewName}`,
     });

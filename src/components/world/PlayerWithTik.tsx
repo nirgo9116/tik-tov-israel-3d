@@ -164,8 +164,24 @@ export const PlayerWithTik: React.FC = () => {
     const dt = Math.min(rawDelta, 0.05);
     const now = clock.getElapsedTime();
     const handingOver = now < jobFx.busyUntil;
-    const forward = (KEYS['KeyW'] || KEYS['ArrowUp'] ? 1 : 0) - (KEYS['KeyS'] || KEYS['ArrowDown'] ? 1 : 0);
-    const turn = (KEYS['KeyA'] || KEYS['ArrowLeft'] ? 1 : 0) - (KEYS['KeyD'] || KEYS['ArrowRight'] ? 1 : 0);
+    let forward = (KEYS['KeyW'] || KEYS['ArrowUp'] ? 1 : 0) - (KEYS['KeyS'] || KEYS['ArrowDown'] ? 1 : 0);
+    let turn = (KEYS['KeyA'] || KEYS['ArrowLeft'] ? 1 : 0) - (KEYS['KeyD'] || KEYS['ArrowRight'] ? 1 : 0);
+    // Click/tap-to-walk: steer toward the target unless a key is pressed
+    const st = useGameStore.getState();
+    if (st.moveTarget) {
+      if (forward !== 0 || turn !== 0) st.setMoveTarget(null);
+      else {
+        const dx = st.moveTarget[0] - playerPos[0];
+        const dz = st.moveTarget[1] - playerPos[2];
+        if (Math.hypot(dx, dz) < 0.5) st.setMoveTarget(null);
+        else {
+          let d = Math.atan2(dx, dz) - playerRot;
+          d = Math.atan2(Math.sin(d), Math.cos(d));
+          turn = Math.max(-1, Math.min(1, d * 3));
+          forward = Math.abs(d) < 1.2 ? 1 : 0;
+        }
+      }
+    }
 
     let nx = playerPos[0];
     let nz = playerPos[2];
