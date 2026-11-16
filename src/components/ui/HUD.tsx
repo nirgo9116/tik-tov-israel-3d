@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon } from 'lucide-react';
+import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles } from 'lucide-react';
 import { CITY_HUBS, START_CASH, useGameStore } from '../../store/gameStore';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
 
@@ -28,6 +28,8 @@ export const HUD: React.FC = () => {
   const overview = useGameStore((s) => s.overview);
   const setOverview = useGameStore((s) => s.setOverview);
   const setLiteMode = useGameStore((s) => s.setLiteMode);
+  const highGraphics = useGameStore((s) => s.highGraphics);
+  const setHighGraphics = useGameStore((s) => s.setHighGraphics);
   const advanceYear = useGameStore((s) => s.advanceYear);
   const clearToast = useGameStore((s) => s.clearToast);
 
@@ -85,6 +87,15 @@ export const HUD: React.FC = () => {
           <button className="btn-mini" onClick={() => setInfoOpen(true)} title="למורה: מקורות, פרטיות ותוכנית הלימודים">
             <Info size={14} /> למורה
           </button>
+          {!liteMode && (
+            <button
+              className={`btn-mini ${highGraphics ? 'btn-on' : ''}`}
+              onClick={() => setHighGraphics(!highGraphics)}
+              title="אפקטים מתקדמים: הצללות רכות, זוהר ותאורה עשירה. מתאים למחשבים חזקים."
+            >
+              <Sparkles size={14} /> גרפיקה {highGraphics ? 'גבוהה' : 'רגילה'}
+            </button>
+          )}
           <button
             className="btn-mini"
             onClick={() => setLiteMode(!liteMode)}

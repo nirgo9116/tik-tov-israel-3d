@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import * as THREE from 'three';
+import { FacadeKind, facadeTexture, repeated } from './textures';
 import { CityHubId } from '../../types/game';
 
 /**
@@ -9,7 +11,7 @@ import { CityHubId } from '../../types/game';
 
 type V3 = [number, number, number];
 
-/** A tower with darker floor bands, so it reads as a building with storeys. */
+/** A tower with a procedural window facade (no image downloads). */
 const Tower: React.FC<{
   position: V3;
   w: number;
@@ -20,26 +22,31 @@ const Tower: React.FC<{
   round?: boolean;
   sides?: number;
   glass?: boolean;
-}> = ({ position, w, d, h, color, band = '#0f172a', round, sides, glass }) => {
-  const floors = Math.max(2, Math.floor(h / 1.6));
-  const shape = (scale: number, height: number) =>
-    round || sides ? (
-      <cylinderGeometry args={[(w / 2) * scale, (w / 2) * scale, height, sides ?? 24]} />
-    ) : (
-      <boxGeometry args={[w * scale, height, d * scale]} />
-    );
+  facade?: FacadeKind;
+}> = ({ position, w, d, h, color, round, sides, glass, facade }) => {
+  const curved = Boolean(round || sides);
+  const map = useMemo(() => {
+    const kind: FacadeKind = facade ?? (glass ? 'glass' : 'residential');
+    const across = curved ? (Math.PI * w) / 3.2 : Math.max(w, d) / 3.2;
+    return repeated(facadeTexture(kind), Math.max(1, Math.round(across)), Math.max(1, h / 5.6));
+  }, [facade, glass, curved, w, d, h]);
   return (
     <group position={position}>
       <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-        {shape(1, h)}
-        <meshStandardMaterial color={color} metalness={glass ? 0.25 : 0.05} roughness={glass ? 0.3 : 0.75} emissive={glass ? color : '#000000'} emissiveIntensity={glass ? 0.12 : 0} />
+        {curved ? <cylinderGeometry args={[w / 2, w / 2, h, sides ?? 28]} /> : <boxGeometry args={[w, h, d]} />}
+        <meshStandardMaterial
+          map={map}
+          color={color}
+          metalness={glass ? 0.3 : 0.02}
+          roughness={glass ? 0.18 : 0.8}
+          envMapIntensity={glass ? 1.8 : 0.6}
+        />
       </mesh>
-      {Array.from({ length: floors - 1 }, (_, i) => (
-        <mesh key={i} position={[0, ((i + 1) * h) / floors, 0]}>
-          {shape(1.015, 0.12)}
-          <meshStandardMaterial color={band} roughness={0.6} />
-        </mesh>
-      ))}
+      {/* Roof cap */}
+      <mesh position={[0, h + 0.15, 0]} castShadow>
+        {curved ? <cylinderGeometry args={[w / 2 - 0.1, w / 2, 0.3, sides ?? 28]} /> : <boxGeometry args={[w - 0.2, 0.3, d - 0.2]} />}
+        <meshStandardMaterial color="#64748b" roughness={0.7} />
+      </mesh>
     </group>
   );
 };
@@ -81,26 +88,24 @@ const StoneWall: React.FC<{ position: V3; length: number; h: number; rotY?: numb
   );
 };
 
-const StoneHouse: React.FC<{ position: V3; w: number; d: number; h: number }> = ({ position, w, d, h }) => (
-  <group position={position}>
-    <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
-      <boxGeometry args={[w, h, d]} />
-      <meshStandardMaterial color={STONE} roughness={0.95} />
-    </mesh>
-    {/* Arched-window band */}
-    <mesh position={[0, h * 0.6, d / 2 + 0.01]}>
-      <boxGeometry args={[w * 0.7, h * 0.18, 0.02]} />
-      <meshStandardMaterial color="#5b4a2f" />
-    </mesh>
-  </group>
-);
+const StoneHouse: React.FC<{ position: V3; w: number; d: number; h: number }> = ({ position, w, d, h }) => {
+  const map = useMemo(() => repeated(facadeTexture('stone'), Math.max(1, Math.round(w / 2.4)), Math.max(1, h / 4.5)), [w, h]);
+  return (
+    <group position={position}>
+      <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, h, d]} />
+        <meshStandardMaterial map={map} roughness={0.95} />
+      </mesh>
+    </group>
+  );
+};
 
 /** TEL AVIV: the three Azrieli towers (round, triangular, square), Bauhaus houses and palms. */
 const TelAviv: React.FC = () => (
   <group>
-    <Tower position={[-2.5, 0, -2.5]} w={3.4} d={3.4} h={18} color="#c7d2e0" band="#475569" round glass />
-    <Tower position={[1.6, 0, -3]} w={3.8} d={3.8} h={16.5} color="#d5dde8" band="#475569" sides={3} glass />
-    <Tower position={[0, 0, 2.5]} w={3.2} d={3.2} h={15} color="#b8c4d4" band="#475569" glass />
+    <Tower position={[-2.5, 0, -2.5]} w={3.4} d={3.4} h={18} color="#e2e8f0" round glass />
+    <Tower position={[1.6, 0, -3]} w={3.8} d={3.8} h={16.5} color="#f1f5f9" sides={3} glass />
+    <Tower position={[0, 0, 2.5]} w={3.2} d={3.2} h={15} color="#e2e8f0" glass />
     {/* Low glass podium: the stock exchange hall, facing the street */}
     <mesh position={[4.6, 1.1, 1.5]} castShadow receiveShadow>
       <boxGeometry args={[3, 2.2, 6]} />
@@ -145,10 +150,7 @@ const Jerusalem: React.FC = () => (
     </group>
     {/* Bank of Israel: low, wide modernist stone building */}
     <group position={[-2, 0, -1]}>
-      <mesh position={[0, 2.2, 0]} castShadow receiveShadow>
-        <boxGeometry args={[8, 4.4, 5.5]} />
-        <meshStandardMaterial color={STONE} roughness={0.9} />
-      </mesh>
+      <StoneHouse position={[0, 0, 0]} w={8} d={5.5} h={4.4} />
       <mesh position={[0, 4.6, 0]} castShadow>
         <boxGeometry args={[6, 0.6, 4]} />
         <meshStandardMaterial color={STONE_DARK} roughness={0.9} />
@@ -189,19 +191,19 @@ const Haifa: React.FC = () => (
       </mesh>
     </group>
     {/* Apartment blocks on the slope: the real estate theme */}
-    <Tower position={[-4.5, 0, 2]} w={2.2} d={2} h={6} color="#f1e7d0" band="#a8a29e" />
-    <Tower position={[-4.5, 1.2, -1.5]} w={2.2} d={2} h={7.5} color="#efe4cc" band="#a8a29e" />
-    <Tower position={[2.2, 0.8, -1.8]} w={2} d={2} h={8.5} color="#e7dcc4" band="#a8a29e" />
-    <Tower position={[1.6, 0, 3.4]} w={2.4} d={1.8} h={4.5} color="#f5ecd8" band="#a8a29e" />
+    <Tower position={[-4.5, 0, 2]} w={2.2} d={2} h={6} color="#f1e7d0" />
+    <Tower position={[-4.5, 1.2, -1.5]} w={2.2} d={2} h={7.5} color="#efe4cc" />
+    <Tower position={[2.2, 0.8, -1.8]} w={2} d={2} h={8.5} color="#e7dcc4" />
+    <Tower position={[1.6, 0, 3.4]} w={2.4} d={1.8} h={4.5} color="#f5ecd8" />
   </group>
 );
 
 /** BE'ER SHEVA: Gav-Yam high-tech park glass towers and the desert. */
 const BeerSheva: React.FC = () => (
   <group>
-    <Tower position={[-3.2, 0, 0.5]} w={3} d={3} h={11} color="#7dd3fc" band="#0369a1" glass />
-    <Tower position={[0.6, 0, -1.8]} w={3} d={3} h={9} color="#38bdf8" band="#0369a1" glass />
-    <Tower position={[3.8, 0, 1.2]} w={2.6} d={2.6} h={7} color="#bae6fd" band="#0369a1" glass />
+    <Tower position={[-3.2, 0, 0.5]} w={3} d={3} h={11} color="#bae6fd" glass />
+    <Tower position={[0.6, 0, -1.8]} w={3} d={3} h={9} color="#93c5fd" glass />
+    <Tower position={[3.8, 0, 1.2]} w={2.6} d={2.6} h={7} color="#e0f2fe" glass />
     {/* Pedestrian bridge between towers */}
     <mesh position={[-1.3, 6, -0.6]} rotation={[0, 0.55, 0]} castShadow>
       <boxGeometry args={[4, 0.5, 0.8]} />
@@ -240,9 +242,72 @@ export const Landmark: React.FC<{ id: CityHubId }> = ({ id }) => {
   return <BeerSheva />;
 };
 
+/** Many trees drawn as two instanced meshes, cheap even on school computers. */
+const Forest: React.FC = () => {
+  const spots = useMemo(() => {
+    const out: Array<[number, number, number]> = [];
+    let seed = 7;
+    const r = () => {
+      seed = (seed * 16807) % 2147483647;
+      return (seed - 1) / 2147483646;
+    };
+    const clear = (x: number, z: number) =>
+      Math.abs(x + 4) < 7 || (Math.abs(z) < 7 && x > -18 && x < 16) || // roads
+      [[-10, -34, 9], [-18, -4, 10], [15, 3, 10], [-4, 34, 10]].some(([cx, cz, rr]) => Math.hypot(x - cx, z - cz) < rr);
+    while (out.length < 140) {
+      const x = -20 + r() * 44;
+      const z = -44 + r() * 64; // north and centre only (the Negev stays open desert)
+      if (!clear(x, z)) out.push([x, z, 0.7 + r() * 0.7]);
+    }
+    return out;
+  }, []);
+  const trunks = React.useRef<THREE.InstancedMesh>(null);
+  const crowns = React.useRef<THREE.InstancedMesh>(null);
+  React.useLayoutEffect(() => {
+    const m = new THREE.Matrix4();
+    spots.forEach(([x, z, sc], i) => {
+      m.compose(new THREE.Vector3(x, 0.6 * sc, z), new THREE.Quaternion(), new THREE.Vector3(sc, sc, sc));
+      trunks.current?.setMatrixAt(i, m);
+      m.compose(new THREE.Vector3(x, 1.9 * sc, z), new THREE.Quaternion(), new THREE.Vector3(sc, sc, sc));
+      crowns.current?.setMatrixAt(i, m);
+    });
+    if (trunks.current) trunks.current.instanceMatrix.needsUpdate = true;
+    if (crowns.current) crowns.current.instanceMatrix.needsUpdate = true;
+  }, [spots]);
+  return (
+    <group>
+      <instancedMesh ref={trunks} args={[undefined, undefined, spots.length]} castShadow>
+        <cylinderGeometry args={[0.12, 0.18, 1.2, 6]} />
+        <meshStandardMaterial color="#6b4423" roughness={0.9} />
+      </instancedMesh>
+      <instancedMesh ref={crowns} args={[undefined, undefined, spots.length]} castShadow receiveShadow>
+        <icosahedronGeometry args={[0.9, 0]} />
+        <meshStandardMaterial color="#3f7d2c" roughness={0.85} flatShading />
+      </instancedMesh>
+    </group>
+  );
+};
+
+const StreetLamp: React.FC<{ position: V3 }> = ({ position }) => (
+  <group position={position}>
+    <mesh position={[0, 1.8, 0]}>
+      <cylinderGeometry args={[0.06, 0.08, 3.6, 6]} />
+      <meshStandardMaterial color="#475569" metalness={0.6} roughness={0.4} />
+    </mesh>
+    <mesh position={[0, 3.6, 0]}>
+      <sphereGeometry args={[0.18, 8, 8]} />
+      <meshStandardMaterial color="#fef9c3" emissive="#fde68a" emissiveIntensity={1.2} />
+    </mesh>
+  </group>
+);
+
 /** Extra scenery outside the city footprints. */
 export const Scenery: React.FC = () => (
   <group>
+    <Forest />
+    {[-30, -20, -10, 10, 20, 30].map((z) => (
+      <StreetLamp key={z} position={[1.4, 0, z]} />
+    ))}
     {/* Tel Aviv beach promenade palms */}
     {[-16, -12, -8, -4, 0, 4, 8].map((z) => (
       <Palm key={z} position={[-24.5, 0, z]} h={3 + (z % 3 === 0 ? 0.6 : 0)} />

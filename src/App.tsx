@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { EffectComposer, Bloom, N8AO, Vignette, SMAA } from '@react-three/postprocessing';
 import { IsraelMapWorld } from './components/world/IsraelMapWorld';
 import { CityHubs } from './components/world/CityHubs';
 import { PlayerWithTik } from './components/world/PlayerWithTik';
@@ -14,6 +15,7 @@ import { useGameStore } from './store/gameStore';
 
 export const App: React.FC = () => {
   const liteMode = useGameStore((s) => s.liteMode);
+  const highGraphics = useGameStore((s) => s.highGraphics);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -49,12 +51,25 @@ export const App: React.FC = () => {
       {liteMode ? (
         <LiteMap />
       ) : (
-        <Canvas shadows dpr={[1, 1.5]} camera={{ position: [-6, 7.5, -15], fov: 50, far: 400 }}>
+        <Canvas
+          shadows
+          dpr={highGraphics ? [1, 2] : [1, 1.5]}
+          gl={{ antialias: !highGraphics, powerPreference: 'high-performance' }}
+          camera={{ position: [-6, 7.5, -15], fov: 50, far: 6000 }}
+        >
           <Suspense fallback={null}>
             <IsraelMapWorld />
             <CityHubs />
             <PlayerWithTik />
           </Suspense>
+          {highGraphics && (
+            <EffectComposer multisampling={0}>
+              <N8AO aoRadius={2.5} intensity={2.2} distanceFalloff={1} halfRes />
+              <Bloom intensity={0.35} luminanceThreshold={0.85} mipmapBlur />
+              <SMAA />
+              <Vignette offset={0.3} darkness={0.5} />
+            </EffectComposer>
+          )}
         </Canvas>
       )}
       <HUD />

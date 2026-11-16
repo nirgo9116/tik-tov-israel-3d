@@ -208,6 +208,22 @@ function writeLitePref(on: boolean) {
   }
 }
 
+function readFlag(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string, on: boolean) {
+  try {
+    window.localStorage.setItem(key, on ? '1' : '0');
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 function readTutorialSeen(): boolean {
   try {
     return window.localStorage.getItem('tiktov-tutorial-seen') === '1';
@@ -264,6 +280,8 @@ interface GameState {
   nearbyHub: CityHubId | null;
 
   liteMode: boolean;
+  /** Extra visual effects for strong computers. */
+  highGraphics: boolean;
   openHub: CityHubId | null;
   tikOpen: boolean;
   trainOpen: boolean;
@@ -284,6 +302,7 @@ interface GameState {
   setTutorialOpen: (open: boolean) => void;
   setOverview: (on: boolean) => void;
   setLiteMode: (on: boolean) => void;
+  setHighGraphics: (on: boolean) => void;
   travelTo: (id: CityHubId) => void;
   clearToast: () => void;
 
@@ -328,6 +347,7 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
   ...initialGame(),
   liteMode: readLitePref(),
+  highGraphics: readFlag('tiktov-hq'),
 
   setPlayerTransform: (pos, rot) => set({ playerPos: pos, playerRot: rot }),
   setNearby: (hub) => {
@@ -347,6 +367,10 @@ export const useGameStore = create<GameState>()(
   setLiteMode: (on) => {
     writeLitePref(on);
     set({ liteMode: on });
+  },
+  setHighGraphics: (on) => {
+    writeFlag('tiktov-hq', on);
+    set({ highGraphics: on });
   },
   travelTo: (id) => {
     const hub = CITY_HUBS.find((h) => h.id === id)!;

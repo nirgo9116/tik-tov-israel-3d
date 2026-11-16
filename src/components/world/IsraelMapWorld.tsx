@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { HEBREW_FONT } from '../../fonts';
-import { Text, Billboard } from '@react-three/drei';
+import { Text, Billboard, Sky, Environment, Lightformer } from '@react-three/drei';
+import { asphaltTexture, groundTexture, repeated } from './textures';
 import { Scenery } from './Landmarks';
 
 export const IsraelMapWorld: React.FC = () => {
@@ -17,14 +18,33 @@ export const IsraelMapWorld: React.FC = () => {
     return list;
   }, []);
 
+  const tex = useMemo(
+    () => ({
+      north: repeated(groundTexture('#2f7d3a', 1), 10, 7),
+      center: repeated(groundTexture('#5b7f2a', 2), 10, 6),
+      negev: repeated(groundTexture('#c08a4a', 3), 10, 7),
+      beach: repeated(groundTexture('#e8cf8a', 4), 1, 30),
+      roadNS: repeated(asphaltTexture(), 2, 15),
+      roadEW: repeated(asphaltTexture(), 7, 2),
+      roadC: repeated(asphaltTexture(), 3, 2),
+    }),
+    []
+  );
+
   return (
     <group>
       {/* Mediterranean Sky & Horizon Fog */}
-      <color attach="background" args={['#0c192c']} />
-      <fog attach="fog" args={['#0c192c', 65, 150]} />
+      <Sky distance={4500} sunPosition={[35, 60, 20]} turbidity={6} rayleigh={1.2} mieCoefficient={0.004} mieDirectionalG={0.85} />
+      <fog attach="fog" args={['#cfe2f0', 90, 230]} />
+      {/* Studio-style environment for reflections on glass, built locally (no HDR download) */}
+      <Environment resolution={128} frames={1}>
+        <Lightformer form="rect" intensity={2.2} color="#fff7e6" position={[30, 40, 20]} scale={[30, 30, 1]} />
+        <Lightformer form="rect" intensity={1.2} color="#bfdbfe" position={[-40, 20, -10]} scale={[40, 20, 1]} />
+        <Lightformer form="ring" intensity={0.8} color="#ffffff" position={[0, 60, 0]} scale={20} />
+      </Environment>
 
       {/* Sunlit Mediterranean Lighting */}
-      <hemisphereLight args={['#bae6fd', '#334155', 0.95]} />
+      <hemisphereLight args={['#dbeafe', '#57534e', 0.75]} />
       <directionalLight
         position={[35, 60, 20]}
         intensity={1.55}
@@ -32,6 +52,8 @@ export const IsraelMapWorld: React.FC = () => {
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.04}
         shadow-camera-left={-65}
         shadow-camera-right={65}
         shadow-camera-top={65}
@@ -41,18 +63,18 @@ export const IsraelMapWorld: React.FC = () => {
       {/* MEDITERRANEAN SEA (West Coastline) */}
       <mesh rotation={[-Math.PI / 2, 0, -0.14]} position={[-46, -0.15, 0]} receiveShadow>
         <planeGeometry args={[52, 160]} />
-        <meshStandardMaterial color="#0284c7" roughness={0.2} metalness={0.4} />
+        <meshStandardMaterial color="#0e7ab8" roughness={0.12} metalness={0.3} envMapIntensity={1.5} />
       </mesh>
       {/* Golden Coastal Beach Strip */}
       <mesh rotation={[-Math.PI / 2, 0, -0.14]} position={[-22, -0.06, 0]} receiveShadow>
         <planeGeometry args={[5, 150]} />
-        <meshStandardMaterial color="#eab308" roughness={0.9} />
+        <meshStandardMaterial map={tex.beach} roughness={0.95} />
       </mesh>
 
       {/* REGION 1: HAIFA & GALILEE (North - Lush Mediterranean Green) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4, -0.04, -32]} receiveShadow>
         <planeGeometry args={[56, 36]} />
-        <meshStandardMaterial color="#166534" roughness={0.9} />
+        <meshStandardMaterial map={tex.north} roughness={0.95} />
       </mesh>
       {/* Mount Carmel & Galilee Hills */}
       {[
@@ -85,7 +107,7 @@ export const IsraelMapWorld: React.FC = () => {
       {/* REGION 2: CENTRAL COASTAL PLAIN & JUDEAN HILLS (Tel Aviv & Jerusalem) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4, -0.04, 0]} receiveShadow>
         <planeGeometry args={[56, 30]} />
-        <meshStandardMaterial color="#3f6212" roughness={0.9} />
+        <meshStandardMaterial map={tex.center} roughness={0.95} />
       </mesh>
       {/* Judean Hills & Jerusalem Stone Terraces (East) */}
       {[
@@ -104,7 +126,7 @@ export const IsraelMapWorld: React.FC = () => {
       {/* REGION 3: BE'ER SHEVA & THE NEGEV DESERT (South - Golden Sandstone) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[4, -0.04, 32]} receiveShadow>
         <planeGeometry args={[56, 36]} />
-        <meshStandardMaterial color="#b45309" roughness={0.95} />
+        <meshStandardMaterial map={tex.negev} roughness={0.97} />
       </mesh>
       {/* Negev Desert Mesas & Solar Array */}
       {[
@@ -145,17 +167,17 @@ export const IsraelMapWorld: React.FC = () => {
       {/* Route 6 (Trans-Israel North-South Highway: Haifa -> Center -> Be'er Sheva) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4, 0.01, 0]} receiveShadow>
         <planeGeometry args={[10, 74]} />
-        <meshStandardMaterial color="#111827" roughness={0.8} />
+        <meshStandardMaterial map={tex.roadNS} roughness={0.9} />
       </mesh>
       {/* Highway 1 (Tel Aviv <-> Jerusalem East-West Corridor) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-1, 0.01, 0]} receiveShadow>
         <planeGeometry args={[34, 10]} />
-        <meshStandardMaterial color="#111827" roughness={0.8} />
+        <meshStandardMaterial map={tex.roadEW} roughness={0.9} />
       </mesh>
       {/* Coastal Connector to Haifa */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-8, 0.01, -26]} receiveShadow>
         <planeGeometry args={[14, 8]} />
-        <meshStandardMaterial color="#111827" roughness={0.8} />
+        <meshStandardMaterial map={tex.roadC} roughness={0.9} />
       </mesh>
 
       {/* Road Center Markings */}
