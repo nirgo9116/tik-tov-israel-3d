@@ -793,3 +793,24 @@ body { direction: rtl; }
 .station-src { font-size: 11px; color: #94a3b8; margin: 8px 0 0; }
 .station-q { font-size: 13px; color: #fde68a; margin-top: 10px; }
 .exit-fab { background: linear-gradient(135deg, #475569, #334155) !important; }
+.stage-pill {
+  display: flex; align-items: center; gap: 10px; pointer-events: auto; cursor: pointer;
+  background: rgba(15, 23, 42, 0.92); color: #f8fafc; border: 2px solid; border-radius: 14px;
+  padding: 6px 12px; font-family: inherit; text-align: start;
+}
+.stage-pill b { display: block; font-size: 13px; }
+.stage-pill small { color: #cbd5e1; font-size: 11px; }
+.stage-steps { display: flex; gap: 4px; }
+.stage-step { width: 20px; height: 20px; border-radius: 50%; background: #334155; color: #94a3b8; font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+.stage-step.on { color: #fff; }
+.stage-step.done { background: #475569; color: #e2e8f0; }
+.prompt-locked { background: rgba(51, 65, 85, 0.95) !important; }
+.stage-intro h2 { font-size: 22px; }
+.stage-intro .stage-budget { font-size: 28px; font-weight: 800; margin: 8px 0; }
+.stage-intro ul { padding-inline-start: 18px; line-height: 1.7; font-size: 14px; }
+.stage-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.stage-table th, .stage-table td { border-bottom: 1px solid #334155; padding: 6px; text-align: start; }
+.teacher-stage { background: #1e293b; border: 1px solid #f59e0b; border-radius: 12px; padding: 12px; margin: 10px 0; }
+.lite-locked { opacity: 0.55; }
+.stage-inline { display: flex; align-items: center; gap: 8px; background: none; border: 0; color: inherit; font: inherit; font-weight: 800; padding: 0; cursor: pointer; pointer-events: auto; }
+.stage-inline .stage-step { width: 18px; height: 18px; font-size: 10px; }

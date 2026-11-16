@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { CITY_HUBS, JOBS, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, JOBS, cityStage, useGameStore } from '../../store/gameStore';
 import { HANDOVER_SECONDS, jobFx } from './jobFx';
 import { INTERIORS, ROOM_HALF_D, ROOM_HALF_W } from '../../data/interiors';
 
@@ -122,7 +122,7 @@ export const PlayerWithTik: React.FC = () => {
   const playerRot = useGameStore((s) => s.playerRot);
   const holdings = useGameStore((s) => s.holdings);
   const overview = useGameStore((s) => s.overview);
-  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.stationInfo));
+  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.stationInfo || s.stageIntroOpen));
   const interior = useGameStore((s) => s.interior);
   const setNearbyStation = useGameStore((s) => s.setNearbyStation);
   const getRubric = useGameStore((s) => s.getRubric);
@@ -250,6 +250,7 @@ export const PlayerWithTik: React.FC = () => {
 
     let foundHub = null;
     for (const hub of CITY_HUBS) {
+      if (cityStage(hub.id) === null) continue;
       if (Math.hypot(nx - hub.entryPos[0], nz - hub.entryPos[2]) < 3.8) {
         foundHub = hub.id;
         break;

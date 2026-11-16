@@ -39,7 +39,7 @@ export const INTERIORS: Record<CityHubId, InteriorDef> = {
     accent: '#10b981',
     blockers: [[0, -4.6, 12, 1.2]],
     stations: [
-      { id: 'teller', label: 'דלפק הבנק: פתיחת פיקדון', pos: [0, -3.2], action: { kind: 'invest' } },
+      { id: 'teller', label: 'דלפק הבנק: פיקדון רגיל או צמוד למדד', pos: [0, -3.2], action: { kind: 'invest' } },
       {
         id: 'rates',
         label: 'לוח הריבית',

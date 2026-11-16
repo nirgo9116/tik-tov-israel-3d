@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack, RotateCcw } from 'lucide-react';
-import { MIN_REASONING_CHARS, START_CASH, useGameStore } from '../../store/gameStore';
+import { MIN_REASONING_CHARS, STAGES, stageInfo, useGameStore } from '../../store/gameStore';
 import { FIRST_YEAR } from '../../data/history';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
@@ -42,6 +42,9 @@ export const TikBagModal: React.FC = () => {
   const getNetWorth = useGameStore((s) => s.getNetWorth);
   const isGameOver = useGameStore((s) => s.isGameOver);
   const resetGame = useGameStore((s) => s.resetGame);
+  const stage = useGameStore((s) => s.stage);
+  const startCash = useGameStore((s) => s.startCash);
+  const stageResults = useGameStore((s) => s.stageResults);
 
   if (!tikOpen) return null;
 
@@ -53,10 +56,9 @@ export const TikBagModal: React.FC = () => {
 
   const has = (c: string[]) => holdings.some((h) => c.includes(h.category));
   const pockets = [
-    { label: 'חיסכון', on: has(['bank']), cls: 'lit-green' },
-    { label: 'נדל"ן', on: has(['realestate']), cls: 'lit-amber' },
-    { label: 'שוק ההון', on: has(['index', 'stock']), cls: 'lit-blue' },
-    { label: 'שותפות', on: has(['coop']), cls: 'lit-purple' },
+    { label: 'שלב 1: חיסכון', on: has(['bank']), cls: 'lit-green' },
+    { label: 'שלב 2: בורסה', on: has(['index', 'stock']), cls: 'lit-blue' },
+    { label: 'שלב 3: נדל"ן', on: has(['realestate']), cls: 'lit-amber' },
   ];
 
   return (
@@ -105,14 +107,49 @@ export const TikBagModal: React.FC = () => {
             <div className="phone-section">
               {over && (
                 <div className="summary-card">
-                  <h4>סיכום המשחק ({FIRST_YEAR}–{year - 1})</h4>
+                  <h4>סיכום {stageInfo(stage).name} ({FIRST_YEAR}–{year - 1})</h4>
                   <p>
-                    התחלתם עם {shekel(START_CASH)} וסיימתם עם {shekel(netWorth)}. אחרי האינפלציה, זה שווה{' '}
+                    התחלתם עם {shekel(startCash)} וסיימתם עם {shekel(netWorth)}. אחרי האינפלציה, זה שווה{' '}
                     {shekel(netWorth / priceLevel)} במחירי {FIRST_YEAR}.
                   </p>
                   <p>ציון ההחלטות: {rubric.total}/100. זה מה שקובע, לא הרווח.</p>
+                  {(() => {
+                    const rows = [
+                      ...stageResults,
+                      { stage, startCash, netWorth, realValue: Math.round(netWorth / priceLevel), score: rubric.total },
+                    ];
+                    return rows.length > 1 || stage === 3 ? (
+                      <table className="stage-table">
+                        <thead>
+                          <tr>
+                            <th>שלב</th>
+                            <th>תקציב</th>
+                            <th>בסוף</th>
+                            <th>שינוי ריאלי</th>
+                            <th>ציון</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rows.map((r) => (
+                            <tr key={r.stage}>
+                              <td>{STAGES[r.stage - 1].name}</td>
+                              <td>{shekel(r.startCash)}</td>
+                              <td>{shekel(r.netWorth)}</td>
+                              <td>{(((r.realValue / r.startCash) - 1) * 100).toFixed(1)}%</td>
+                              <td>{r.score}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : null;
+                  })()}
+                  <p>
+                    {stage < 3
+                      ? 'חכו שהמורה יפתח את השלב הבא. אפשר בינתיים לכתוב "מה למדתי" ביומן.'
+                      : 'שאלה לסיכום: איזה עולם התאים לאיזו מטרה, ולמה?'}
+                  </p>
                   <button className="btn-mini" onClick={resetGame}>
-                    <RotateCcw size={14} /> משחק חדש
+                    <RotateCcw size={14} /> לשחק את השלב הזה מחדש
                   </button>
                 </div>
               )}
@@ -122,7 +159,7 @@ export const TikBagModal: React.FC = () => {
               </div>
               <h4 className="section-title">הנכסים בתיק</h4>
               {holdings.length === 0 ? (
-                <p className="text-muted">התיק עוד ריק. בקרו בירושלים, בחיפה, בתל אביב או בבאר שבע כדי להשקיע.</p>
+                <p className="text-muted">התיק עוד ריק. היכנסו לבניין של השלב הנוכחי כדי להשקיע.</p>
               ) : (
                 holdings.map((h) => (
                   <div key={h.id} className="mini-holding-row">

@@ -13,6 +13,7 @@
  * - boiRateEnd: Bank of Israel policy rate at the end of the year, in %.
  * - deposit:    Simplified deposit return: approximately the AVERAGE BoI rate during the year.
  *               Real bank deposits usually paid less than this.
+ * - cpiLinked:  Simplified CPI-linked deposit: earns exactly the CPI change (0% real interest).
  *
  * Fictional series (shown in the game with a "בדוי" tag, for teaching only):
  * - fictionalStock: a made-up single tech company, to show concentration risk.
@@ -21,6 +22,7 @@
 
 export type AssetKey =
   | 'deposit'
+  | 'cpiLinked'
   | 'ta125'
   | 'housing'
   | 'housingRent'
@@ -157,6 +159,7 @@ export const HISTORY: YearData[] = raw.map((r) => ({
   detail: r.detail,
   returns: {
     deposit: r.deposit,
+    cpiLinked: r.cpi,
     ta125: r.ta125,
     housing: r.housing,
     housingRent: r.housing + RENT_YIELD,

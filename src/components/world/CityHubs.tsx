@@ -2,13 +2,14 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, Billboard } from '@react-three/drei';
 import * as THREE from 'three';
-import { CITY_HUBS, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, cityStage, useGameStore } from '../../store/gameStore';
 import { HEBREW_FONT } from '../../fonts';
 import { Landmark, LANDMARK_SIGN_HEIGHT } from './Landmarks';
 
 export const CityHubs: React.FC = () => {
   const nearbyHub = useGameStore((s) => s.nearbyHub);
   const enterBuilding = useGameStore((s) => s.enterBuilding);
+  const stage = useGameStore((s) => s.stage);
   const ringRefs = useRef<(THREE.Mesh | null)[]>([]);
 
   useFrame(({ clock }) => {
@@ -27,6 +28,10 @@ export const CityHubs: React.FC = () => {
         const isNear = nearbyHub === hub.id;
         const [bx, , bz] = hub.position;
         const [ex, , ez] = hub.entryPos;
+        const hubStage = cityStage(hub.id);
+        const active = hubStage === stage;
+        const status =
+          hubStage === null ? 'עבודת קיץ בלבד' : active ? `שלב ${hubStage}: ${hub.hubTitle}` : hubStage > stage ? `נעול: נפתח בשלב ${hubStage}` : `שלב ${hubStage} הסתיים`;
 
         return (
           <group key={hub.id}>
@@ -56,17 +61,26 @@ export const CityHubs: React.FC = () => {
                   direction="rtl"
                   position={[0, -0.3, 0]}
                   fontSize={0.78}
-                  color="#fde68a"
+                  color={active ? '#fde68a' : '#94a3b8'}
                   outlineWidth={0.08}
                   outlineColor="#0f172a"
                   anchorY="top"
                 >
-                  {hub.hubTitle}
+                  {status}
                 </Text>
               </Billboard>
             </group>
 
-            {/* Glowing Entry Pad */}
+            {/* Beacon over the building of the current stage */}
+            {active && (
+              <mesh position={[bx, 40, bz]}>
+                <cylinderGeometry args={[1.2, 1.2, 80, 16, 1, true]} />
+                <meshBasicMaterial color={hub.color} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} />
+              </mesh>
+            )}
+
+            {/* Glowing Entry Pad (grey when the stage is locked or over) */}
+            {hubStage !== null && (
             <group
               position={[ex, 0.06, ez]}
               onClick={(e) => {
@@ -77,9 +91,9 @@ export const CityHubs: React.FC = () => {
               <mesh rotation={[-Math.PI / 2, 0, 0]}>
                 <circleGeometry args={[2.6, 32]} />
                 <meshStandardMaterial
-                  color={hub.color}
-                  emissive={hub.color}
-                  emissiveIntensity={isNear ? 1.5 : 0.7}
+                  color={active ? hub.color : '#64748b'}
+                  emissive={active ? hub.color : '#000000'}
+                  emissiveIntensity={active ? (isNear ? 1.5 : 0.7) : 0}
                   transparent
                   opacity={0.78}
                 />
@@ -93,13 +107,14 @@ export const CityHubs: React.FC = () => {
               >
                 <ringGeometry args={[2.7, 3.25, 32]} />
                 <meshStandardMaterial
-                  color="#ffffff"
-                  emissive={hub.color}
-                  emissiveIntensity={1}
+                  color={active ? '#ffffff' : '#94a3b8'}
+                  emissive={active ? hub.color : '#000000'}
+                  emissiveIntensity={active ? 1 : 0}
                   side={THREE.DoubleSide}
                 />
               </mesh>
             </group>
+            )}
           </group>
         );
       })}

@@ -14,7 +14,61 @@ import {
 import { AssetKey, FIRST_YEAR, LAST_YEAR, START_RATE, yearData } from '../data/history';
 import { nearestStation, railPath } from '../data/rail';
 
-export const START_CASH = 50000;
+/** The three stages ("worlds") of the game. Each one replays 2017–2024 with its own budget. */
+export type StageNum = 1 | 2 | 3;
+export interface StageInfo {
+  n: StageNum;
+  city: CityHubId;
+  name: string;
+  short: string;
+  budget: number;
+  color: string;
+  intro: string[];
+}
+export const STAGES: StageInfo[] = [
+  {
+    n: 1,
+    city: 'jerusalem',
+    name: 'עולם החיסכון',
+    short: 'חיסכון',
+    budget: 50000,
+    color: '#10b981',
+    intro: [
+      'בשלב הזה מנהלים 50,000 ₪ (כסף וירטואלי), רק באפיקי חיסכון: פיקדון רגיל ופיקדון צמוד למדד.',
+      'הבנק נמצא בירושלים. נכנסים לבניין, לומדים מלוחות הריבית והאינפלציה, ומחליטים.',
+      'השאלה של השלב: האם הכסף שומר על כוח הקנייה שלו כשהמחירים עולים?',
+    ],
+  },
+  {
+    n: 2,
+    city: 'telaviv',
+    name: 'עולם הבורסה',
+    short: 'בורסה',
+    budget: 250000,
+    color: '#3b82f6',
+    intro: [
+      'בשלב הזה מנהלים 250,000 ₪ (כסף וירטואלי) בשוק ההון: קרן מחקת מדד ת"א-125 ומניה בודדת בדויה.',
+      'הבורסה נמצאת בתל אביב. נכנסים לאולם המסחר, משווים בין המדד למניה הבודדת, ומחליטים.',
+      'השאלה של השלב: איך מתמודדים עם עליות וירידות, ומה עושה הפיזור?',
+    ],
+  },
+  {
+    n: 3,
+    city: 'haifa',
+    name: 'עולם הנדל"ן',
+    short: 'נדל"ן',
+    budget: 1000000,
+    color: '#f59e0b',
+    intro: [
+      'בשלב הזה מנהלים 1,000,000 ₪ (כסף וירטואלי) בנדל"ן: דירה להשקעה וקבוצת רכישה.',
+      'משרד התיווך נמצא בחיפה. בודקים את מדד מחירי הדירות ואת השכירות, ומחליטים.',
+      'השאלה של השלב: מה המחיר של נכס גדול שקשה למכור מהר?',
+    ],
+  },
+];
+export const stageInfo = (n: StageNum) => STAGES[n - 1];
+/** The stage a city belongs to (Be'er Sheva has only a summer job). */
+export const cityStage = (id: CityHubId): StageNum | null => STAGES.find((st) => st.city === id)?.n ?? null;
 export const MIN_REASONING_CHARS = 15;
 const CONCEPT_WORDS = ['סיכון', 'פיזור', 'ריבית', 'אינפלציה', 'טווח', 'תשואה', 'נזיל', 'מדד', 'שכירות', 'הפסד', 'ארוך', 'קצר'];
 
@@ -98,6 +152,16 @@ export const HUB_PRODUCTS: Record<CityHubId, ProductOption[]> = {
       description: 'כסף שמופקד בבנק ומרוויח ריבית. הקרן לא יורדת, אבל כשהאינפלציה גבוהה מהריבית, כוח הקנייה נשחק.',
       howItEarns: 'בערך הריבית הממוצעת של בנק ישראל באותה שנה',
     },
+    {
+      id: 'jlm-cpi',
+      name: 'פיקדון צמוד למדד',
+      region: 'ירושלים',
+      category: 'bank',
+      assetKey: 'cpiLinked',
+      riskLevel: 'נמוך',
+      description: 'פיקדון שהערך שלו עולה יחד עם מדד המחירים לצרכן. הוא שומר על כוח הקנייה, אבל כשהאינפלציה נמוכה הוא כמעט לא מרוויח.',
+      howItEarns: 'שינוי מדד המחירים לצרכן באותה שנה (פישוט: בלי ריבית נוספת)',
+    },
   ],
   haifa: [
     {
@@ -145,44 +209,10 @@ export const HUB_PRODUCTS: Record<CityHubId, ProductOption[]> = {
       howItEarns: 'תשואות בדויות להמחשה, עם תנודות חדות',
     },
   ],
-  beersheva: [
-    {
-      id: 'negev-coop',
-      name: 'קואופרטיב סולארי בנגב',
-      region: 'באר שבע והנגב',
-      category: 'coop',
-      assetKey: 'fictionalCoop',
-      riskLevel: 'בינוני',
-      fictional: true,
-      partners: ['דן', 'מאיה'],
-      description: 'שותפות בדויה בהקמת שדה סולארי. ממחישה השקעה משותפת עם תשואה יציבה יחסית, אבל קשה לצאת ממנה מהר.',
-      howItEarns: 'תשואות בדויות להמחשה',
-    },
-  ],
+  beersheva: [],
 };
 
-const INITIAL_MISSIONS: Mission[] = [
-  {
-    id: 'm1',
-    title: 'כרית ביטחון',
-    regionHint: 'ירושלים',
-    description: 'החזיקו לפחות 10,000 ₪ בפיקדון בנקאי.',
-    completed: false,
-  },
-  {
-    id: 'm2',
-    title: 'פיזור',
-    regionHint: 'שלוש ערים לפחות',
-    description: 'החזיקו בו-זמנית שלושה סוגי נכסים שונים.',
-    completed: false,
-  },
-  {
-    id: 'm3',
-    title: 'אופק ארוך',
-    regionHint: 'תל אביב',
-    description: 'החזיקו קרן מחקת מדד לפחות שלוש שנים ברציפות.',
-    completed: false,
-  },
+const COMMON_MISSIONS: Mission[] = [
   {
     id: 'm4',
     title: 'ללמוד מהתוצאות',
@@ -198,6 +228,29 @@ const INITIAL_MISSIONS: Mission[] = [
     completed: false,
   },
 ];
+const STAGE_MISSIONS: Record<StageNum, Mission[]> = {
+  1: [
+    { id: 's1a', title: 'כרית ביטחון', regionHint: 'הבנק בירושלים', description: 'החזיקו לפחות 10,000 ₪ בפיקדון.', completed: false },
+    { id: 's1b', title: 'מגינים מאינפלציה', regionHint: 'הבנק בירושלים', description: 'החזיקו גם פיקדון רגיל וגם פיקדון צמוד למדד באותו זמן.', completed: false },
+  ],
+  2: [
+    { id: 's2a', title: 'אופק ארוך', regionHint: 'הבורסה בתל אביב', description: 'החזיקו קרן מחקת מדד לפחות שלוש שנים ברציפות.', completed: false },
+    { id: 's2b', title: 'בלי לשים הכול על מניה אחת', regionHint: 'הבורסה בתל אביב', description: 'סיימו שנה עם השקעה במדד, כשהמניה הבודדת היא פחות מ-35% מהתיק.', completed: false },
+  ],
+  3: [
+    { id: 's3a', title: 'דירה ראשונה להשקעה', regionHint: 'משרד התיווך בחיפה', description: 'קנו דירה להשקעה.', completed: false },
+    { id: 's3b', title: 'נזילות', regionHint: 'הכסף הפנוי', description: 'סיימו שנה עם השקעה בנדל"ן, ועם לפחות 10% מהתיק בכסף פנוי.', completed: false },
+  ],
+};
+/** Why a city cannot be entered in the current stage. */
+export function lockedMessage(id: CityHubId, stage: StageNum): string {
+  const st = cityStage(id);
+  if (st === null) return 'בבאר שבע יש רק עבודת קיץ. הדוכן הירוק נמצא ליד הכניסה לעיר.';
+  if (st > stage) return `${stageInfo(st).name} נפתח בשלב ${st}. המורה פותח את השלבים.`;
+  return `${stageInfo(st).name} כבר הסתיים. עכשיו אתם ב${stageInfo(stage).name}.`;
+}
+
+const stageMissions = (n: StageNum): Mission[] => [...STAGE_MISSIONS[n], ...COMMON_MISSIONS];
 
 export interface Job {
   id: string;
@@ -330,16 +383,23 @@ function fmt(n: number) {
   return `₪${Math.round(n).toLocaleString('he-IL')}`;
 }
 
-function checkMissions(missions: Mission[], holdings: Holding[], journal: JournalEntry[], year: number): Mission[] {
+function checkMissions(missions: Mission[], holdings: Holding[], journal: JournalEntry[], year: number, cash = 0, yearEnd = false): Mission[] {
   const depositTotal = holdings.filter((h) => h.category === 'bank').reduce((s, h) => s + h.currentValue, 0);
-  const kinds = new Set(holdings.map((h) => h.category)).size;
+  const keys = new Set(holdings.map((h) => h.assetKey));
   const longIndex = holdings.some((h) => h.category === 'index' && year - h.sinceYear >= 3);
   const reflections = journal.filter((j) => j.learnedAfter.trim().length >= MIN_REASONING_CHARS).length;
+  const invested = holdings.reduce((s, h) => s + h.currentValue, 0);
+  const net = invested + cash;
+  const stockShare = net > 0 ? holdings.filter((h) => h.category === 'stock').reduce((s, h) => s + h.currentValue, 0) / net : 0;
+  const hasRealEstate = holdings.some((h) => h.category === 'realestate');
   return missions.map((m) => {
     if (m.completed) return m;
-    if (m.id === 'm1' && depositTotal >= 10000) return { ...m, completed: true };
-    if (m.id === 'm2' && kinds >= 3) return { ...m, completed: true };
-    if (m.id === 'm3' && longIndex) return { ...m, completed: true };
+    if (m.id === 's1a' && depositTotal >= 10000) return { ...m, completed: true };
+    if (m.id === 's1b' && keys.has('deposit') && keys.has('cpiLinked')) return { ...m, completed: true };
+    if (m.id === 's2a' && longIndex) return { ...m, completed: true };
+    if (m.id === 's2b' && yearEnd && keys.has('ta125') && stockShare < 0.35) return { ...m, completed: true };
+    if (m.id === 's3a' && keys.has('housingRent')) return { ...m, completed: true };
+    if (m.id === 's3b' && yearEnd && hasRealEstate && net > 0 && cash / net >= 0.1) return { ...m, completed: true };
     if (m.id === 'm4' && reflections >= 2) return { ...m, completed: true };
     if (m.id === 'm5' && journal.some((j) => j.category === 'עבודה' && j.amount >= 0.5 * (j.payTotal ?? Infinity)))
       return { ...m, completed: true };
@@ -350,6 +410,15 @@ function checkMissions(missions: Mission[], holdings: Holding[], journal: Journa
 type TikTab = 'bag' | 'missions' | 'journal' | 'rubric';
 
 interface GameState {
+  /** Current stage (world) and its starting budget. */
+  stage: StageNum;
+  startCash: number;
+  /** Results of stages that the class already finished. */
+  stageResults: Array<{ stage: StageNum; startCash: number; netWorth: number; realValue: number; score: number }>;
+  stageIntroOpen: boolean;
+  setStageIntroOpen: (open: boolean) => void;
+  /** Teacher only: save this stage's result and open the next world. */
+  startNextStage: () => void;
   cash: number;
   /** The year in which students are currently deciding. LAST_YEAR + 1 means the game is over. */
   year: number;
@@ -434,14 +503,16 @@ interface GameState {
   getRubric: () => RubricBreakdown;
 }
 
-const initialGame = () => ({
-  cash: START_CASH,
+const initialGame = (stage: StageNum = 1) => ({
+  stage,
+  startCash: stageInfo(stage).budget,
+  cash: stageInfo(stage).budget,
   year: FIRST_YEAR,
   interestRate: START_RATE,
   priceLevel: 1,
   holdings: [] as Holding[],
   journal: [] as JournalEntry[],
-  missions: INITIAL_MISSIONS,
+  missions: stageMissions(stage),
   currentEvent: null as YearEvent | null,
   eventHistory: [] as YearEvent[],
   activeYears: [] as number[],
@@ -470,7 +541,9 @@ const initialGame = () => ({
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
-  ...initialGame(),
+  ...initialGame(1),
+  stageResults: [] as GameState['stageResults'],
+  stageIntroOpen: false,
   liteMode: readLitePref(),
   highGraphics: readFlag('tiktov-hq'),
 
@@ -496,6 +569,11 @@ export const useGameStore = create<GameState>()(
   },
   enterBuilding: (id) => {
     const hub = CITY_HUBS.find((h) => h.id === id)!;
+    const st = cityStage(id);
+    if (st !== get().stage) {
+      set({ toastMessage: lockedMessage(id, get().stage) });
+      return;
+    }
     set({ interior: id, playerPos: [0, 0, 3.4], playerRot: Math.PI, overview: false, openHub: null, nearbyHub: null, nearbyJob: null, toastMessage: `נכנסתם: ${hub.hubTitle}` });
   },
   exitBuilding: () => {
@@ -518,7 +596,13 @@ export const useGameStore = create<GameState>()(
     get().travelTo(ride.to);
     if (ride.thenJob) get().startJob(ride.thenJob);
   },
-  setOpenHub: (id) => set((s) => ({ openHub: id, tikOpen: id ? false : s.tikOpen, trainOpen: false })),
+  setOpenHub: (id) => {
+    if (id && cityStage(id) !== get().stage) {
+      set({ toastMessage: lockedMessage(id, get().stage) });
+      return;
+    }
+    set((s) => ({ openHub: id, tikOpen: id ? false : s.tikOpen, trainOpen: false }));
+  },
   setTikOpen: (open, tab) =>
     set((s) => ({ tikOpen: open, tikTab: tab ?? s.tikTab, openHub: open ? null : s.openHub, trainOpen: false })),
   setTikTab: (tab) => set({ tikTab: tab }),
@@ -527,7 +611,9 @@ export const useGameStore = create<GameState>()(
   setOverview: (on) => set({ overview: on }),
   setTutorialOpen: (open) => {
     if (!open) writeTutorialSeen();
-    set({ tutorialOpen: open });
+    const s = get();
+    // After the first tutorial, introduce the current stage
+    set({ tutorialOpen: open, stageIntroOpen: !open && s.tutorialOpen && s.journal.length === 0 ? true : s.stageIntroOpen });
   },
   setLiteMode: (on) => {
     writeLitePref(on);
@@ -550,6 +636,11 @@ export const useGameStore = create<GameState>()(
   investAction: (product, amount, thoughtBefore) => {
     const s = get();
     if (s.isGameOver()) return false;
+    const city = (Object.keys(HUB_PRODUCTS) as CityHubId[]).find((c) => HUB_PRODUCTS[c].some((p) => p.id === product.id));
+    if (!city || cityStage(city) !== s.stage) {
+      set({ toastMessage: 'האפיק הזה לא שייך לשלב הנוכחי.' });
+      return false;
+    }
     if (thoughtBefore.trim().length < MIN_REASONING_CHARS) {
       set({ toastMessage: 'אין החלטה בלי הנמקה: כתבו לפחות משפט אחד ביומן ההחלטות.' });
       return false;
@@ -691,10 +782,10 @@ export const useGameStore = create<GameState>()(
       priceLevel: s.priceLevel * (1 + data.cpi / 100),
       holdings,
       journal,
-      missions: checkMissions(s.missions, holdings, journal, nextYear),
+      missions: checkMissions(s.missions, holdings, journal, nextYear, s.cash, true),
       currentEvent: event,
       eventHistory: s.currentEvent ? [s.currentEvent, ...s.eventHistory] : s.eventHistory,
-      toastMessage: over ? 'המשחק הסתיים! פתחו את התיק לסיכום.' : `עברנו ל-${nextYear}. ${data.headline}`,
+      toastMessage: over ? (s.stage < 3 ? `${stageInfo(s.stage).name} הסתיים! פתחו את התיק לסיכום. המורה יפתח את השלב הבא.` : 'המשחק הסתיים! פתחו את התיק לסיכום של שלושת השלבים.') : `עברנו ל-${nextYear}. ${data.headline}`,
     });
   },
 
@@ -754,7 +845,23 @@ export const useGameStore = create<GameState>()(
     });
   },
 
-  resetGame: () => set({ ...initialGame() }),
+  resetGame: () => set((s) => ({ ...initialGame(s.stage), stageIntroOpen: true })),
+  setStageIntroOpen: (open) => set({ stageIntroOpen: open }),
+  startNextStage: () => {
+    const s = get();
+    if (s.stage >= 3) return;
+    const netWorth = s.getNetWorth();
+    const result = { stage: s.stage, startCash: s.startCash, netWorth, realValue: Math.round(netWorth / s.priceLevel), score: s.getRubric().total };
+    const next = (s.stage + 1) as StageNum;
+    set({
+      ...initialGame(next),
+      stageResults: [...s.stageResults.filter((r) => r.stage !== s.stage), result],
+      stageIntroOpen: true,
+      infoOpen: false,
+      tikOpen: false,
+      openHub: null,
+    });
+  },
 
   isGameOver: () => get().year > LAST_YEAR,
 
@@ -785,12 +892,14 @@ export const useGameStore = create<GameState>()(
       }, 0)
     );
 
-    const kinds = new Set(s.holdings.map((h) => h.category)).size;
-    let diversification = Math.min(20, kinds * 5);
+    // Spread inside the stage: different products, plus some free cash as a reserve
+    const kinds = new Set(s.holdings.map((h) => h.assetKey)).size;
+    const reserve = netWorth > 0 && s.cash / netWorth >= 0.1 && s.holdings.length > 0;
+    let diversification = Math.min(20, kinds * 7 + (reserve ? 6 : 0));
     const overloaded = s.holdings.some((h) => netWorth > 0 && h.currentValue / netWorth > 0.35 && h.riskLevel === 'גבוה');
     if (overloaded) diversification = Math.max(0, diversification - 10);
 
-    const realGrowth = (netWorth / s.priceLevel / START_CASH - 1) * 100;
+    const realGrowth = (netWorth / s.priceLevel / s.startCash - 1) * 100;
     let riskAdjusted = Math.round(10 + realGrowth * 0.4);
     if (overloaded) riskAdjusted -= 5;
     riskAdjusted = Math.max(0, Math.min(20, riskAdjusted));
@@ -812,7 +921,7 @@ export const useGameStore = create<GameState>()(
   },
 }),
     {
-      name: 'tiktov-game-v1',
+      name: 'tiktov-game-v2',
       // Progress stays only on this device (browser storage). Nothing is sent anywhere.
       storage: createJSONStorage(() => {
         try {
@@ -835,6 +944,9 @@ export const useGameStore = create<GameState>()(
         activeJob: s.activeJob,
         jobYear: s.jobYear,
         paycheck: s.paycheck,
+        stage: s.stage,
+        startCash: s.startCash,
+        stageResults: s.stageResults,
       }),
     }
   )

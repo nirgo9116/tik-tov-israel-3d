@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles, Briefcase } from 'lucide-react';
-import { CITY_HUBS, JOBS, START_CASH, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, JOBS, cityStage, stageInfo, useGameStore } from '../../store/gameStore';
 import { INTERIORS } from '../../data/interiors';
 import { runStation } from './stations';
 import { FIRST_YEAR, LAST_YEAR } from '../../data/history';
@@ -53,6 +53,10 @@ export const HUD: React.FC = () => {
   const over = isGameOver();
   const activeHub = CITY_HUBS.find((h) => h.id === nearbyHub);
   const realValue = netWorth / priceLevel;
+  const stage = useGameStore((s) => s.stage);
+  const startCash = useGameStore((s) => s.startCash);
+  const setStageIntroOpen = useGameStore((s) => s.setStageIntroOpen);
+  const st = stageInfo(stage);
   const roundNo = Math.min(year, LAST_YEAR) - FIRST_YEAR + 1;
   const rounds = LAST_YEAR - FIRST_YEAR + 1;
 
@@ -68,7 +72,16 @@ export const HUD: React.FC = () => {
         <div className="brand-pill">
           <span className="brand-dot" />
           <div>
-            <div className="brand-title">תיק טוב: מסע השקעות בישראל</div>
+            <button className="brand-title stage-inline" onClick={() => setStageIntroOpen(true)} title="מה עושים בשלב הזה?">
+              <span className="stage-steps">
+                {[1, 2, 3].map((n) => (
+                  <span key={n} className={`stage-step${n === stage ? ' on' : n < stage ? ' done' : ''}`} style={n === stage ? { backgroundColor: st.color } : undefined}>
+                    {n}
+                  </span>
+                ))}
+              </span>
+              תיק טוב · <span style={{ color: st.color }}>{st.name}</span> · {shekel(startCash)}
+            </button>
             <div className="brand-sub">
               {over ? 'המשחק הסתיים' : `שנת ${year} (סבב ${roundNo} מתוך ${rounds})`} • ריבית בנק ישראל {interestRate}%
               {!liteMode && <> • <b>{getCurrentRegionName()}</b></>}
@@ -85,7 +98,7 @@ export const HUD: React.FC = () => {
             <span className="stat-label">שווי התיק</span>
             <span className="stat-val">{shekel(netWorth)}</span>
           </div>
-          <div className="stat-chip" title={`כמה שווה התיק במחירי ${FIRST_YEAR}, אחרי האינפלציה. התחלתם עם ${shekel(START_CASH)}.`}>
+          <div className="stat-chip" title={`כמה שווה התיק במחירי ${FIRST_YEAR}, אחרי האינפלציה. התחלתם את השלב עם ${shekel(startCash)}.`}>
             <span className="stat-label">בכוח קנייה של {FIRST_YEAR}</span>
             <span className="stat-val">{shekel(realValue)}</span>
           </div>
@@ -130,9 +143,9 @@ export const HUD: React.FC = () => {
             </>
           ) : (
             <>
-              <strong>ברוכים הבאים ל-{FIRST_YEAR}!</strong> —{' '}
+              <strong>{st.name}: ברוכים הבאים ל-{FIRST_YEAR}!</strong> —{' '}
               <span>
-                יש לכם {shekel(START_CASH)} (כסף וירטואלי). בכל שנה מחליטים איפה להשקיע ומנמקים, ובסוף השנה רואים מה קרה באמת לפי נתוני העבר.
+                יש לכם {shekel(startCash)} (כסף וירטואלי). לכו ל{CITY_HUBS.find((h) => h.id === st.city)!.hebrewName}, החליטו ונמקו, ובסוף השנה רואים מה קרה באמת לפי נתוני העבר.
               </span>
             </>
           )}
@@ -189,7 +202,10 @@ export const HUD: React.FC = () => {
           {standJob && !canWork && !activeJob && (
             <div className="prompt-btn">כבר עבדתם השנה. אפשר לעבוד שוב אחרי שהמורה יעביר שנה.</div>
           )}
-          {activeHub && !standJob && (
+          {activeHub && !standJob && cityStage(activeHub.id) !== stage && (
+            <div className="prompt-btn prompt-locked">🔒 {activeHub.hubTitle}: {cityStage(activeHub.id) && cityStage(activeHub.id)! > stage ? `נפתח בשלב ${cityStage(activeHub.id)}` : 'השלב הזה הסתיים'}</div>
+          )}
+          {activeHub && !standJob && cityStage(activeHub.id) === stage && (
             <button className="prompt-btn prompt-landmark" onClick={() => enterBuilding(activeHub.id)}>
               <MapPin size={18} />
               <span>

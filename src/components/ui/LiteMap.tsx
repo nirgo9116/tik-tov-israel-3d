@@ -1,5 +1,5 @@
 import React from 'react';
-import { CITY_HUBS, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, cityStage, useGameStore } from '../../store/gameStore';
 
 /**
  * Light mode: a flat map of Israel with four city buttons and no 3D.
@@ -8,6 +8,8 @@ import { CITY_HUBS, useGameStore } from '../../store/gameStore';
 export const LiteMap: React.FC = () => {
   const setOpenHub = useGameStore((s) => s.setOpenHub);
   const holdings = useGameStore((s) => s.holdings);
+  const stage = useGameStore((s) => s.stage);
+  const setJobsOpen = useGameStore((s) => s.setJobsOpen);
   return (
     <div className="lite-root">
       <div className="lite-map">
@@ -32,18 +34,22 @@ export const LiteMap: React.FC = () => {
             if (hub.id === 'jerusalem') return h.category === 'bank';
             if (hub.id === 'haifa') return h.category === 'realestate';
             if (hub.id === 'telaviv') return h.category === 'index' || h.category === 'stock';
-            return h.category === 'coop';
+            return false;
           }).length;
+          const hs = cityStage(hub.id);
+          const active = hs === stage;
           return (
             <button
               key={hub.id}
-              className="lite-city"
-              style={{ ...pos[hub.id], borderColor: hub.color }}
-              onClick={() => setOpenHub(hub.id)}
+              className={`lite-city${active || hs === null ? '' : ' lite-locked'}`}
+              style={{ ...pos[hub.id], borderColor: active ? hub.color : '#475569' }}
+              onClick={() => (hs === null ? setJobsOpen(true) : setOpenHub(hub.id))}
             >
-              <span className="lite-dot" style={{ backgroundColor: hub.color }} />
+              <span className="lite-dot" style={{ backgroundColor: active ? hub.color : '#64748b' }} />
               <strong>{hub.hebrewName}</strong>
-              <span>{hub.hubTitle}</span>
+              <span>
+                {hs === null ? 'עבודת קיץ' : active ? `שלב ${hs}: ${hub.hubTitle}` : hs > stage ? `נעול: נפתח בשלב ${hs}` : `שלב ${hs} הסתיים`}
+              </span>
               {count > 0 && <span className="lite-count">{count} בתיק</span>}
             </button>
           );

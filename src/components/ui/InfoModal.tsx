@@ -1,12 +1,17 @@
 import React from 'react';
 import { X, Info } from 'lucide-react';
-import { useGameStore } from '../../store/gameStore';
+import { STAGES, stageInfo, useGameStore } from '../../store/gameStore';
 import { HISTORY, SOURCES } from '../../data/history';
 
 export const InfoModal: React.FC = () => {
   const open = useGameStore((s) => s.infoOpen);
   const setInfoOpen = useGameStore((s) => s.setInfoOpen);
+  const stage = useGameStore((s) => s.stage);
+  const year = useGameStore((s) => s.year);
+  const startNextStage = useGameStore((s) => s.startNextStage);
+  const isGameOver = useGameStore((s) => s.isGameOver);
   if (!open) return null;
+  const finished = isGameOver();
   return (
     <div className="modal-backdrop" onClick={() => setInfoOpen(false)}>
       <div className="modal-card info-card" onClick={(e) => e.stopPropagation()}>
@@ -19,10 +24,46 @@ export const InfoModal: React.FC = () => {
           </button>
         </div>
 
+        <div className="teacher-stage">
+          <h4 style={{ marginTop: 0 }}>שלבי המשחק (למורה)</h4>
+          <p>
+            עכשיו: שלב {stage}, {stageInfo(stage).name}, שנת {Math.min(year, 2024)}
+            {finished ? ' (השלב הסתיים)' : ''}.
+          </p>
+          {stage < 3 ? (
+            <button
+              className="btn-invest"
+              onClick={() => {
+                const msg = finished
+                  ? `לפתוח את ${stageInfo((stage + 1) as 1 | 2 | 3).name}?`
+                  : `השלב הנוכחי עוד לא הסתיים (שנת ${year}). לפתוח בכל זאת את ${stageInfo((stage + 1) as 1 | 2 | 3).name}? התוצאה של השלב הנוכחי תישמר כמו שהיא.`;
+                if (window.confirm(msg)) startNextStage();
+              }}
+            >
+              פתיחת השלב הבא: {stageInfo((stage + 1) as 1 | 2 | 3).name}
+            </button>
+          ) : (
+            <p>זה השלב האחרון. בסוף השלב, התלמידים רואים בתיק טבלה שמשווה בין שלושת העולמות.</p>
+          )}
+          <p className="text-muted" style={{ fontSize: 12 }}>
+            ההתקדמות נשמרת בכל מחשב בנפרד, ולכן כל תלמיד לוחץ על הכפתור כשהמורה אומר (כמו בכפתור "לשנה הבאה").
+          </p>
+        </div>
+
         <h4>למי ומה</h4>
         <p>
-          כלי תרגול לחינוך פיננסי בכיתה י׳: הכנסה מעבודה ותקציב, חיסכון וריבית, נדל"ן, שוק ההון, סיכון ותשואה, פיזור, אופק השקעה ואינפלציה. כל סבב הוא שנה אחת,
-          מ-2017 עד 2024. המורה מקדם את השנה בכפתור "לשנה הבאה", כך שהכיתה מתקדמת יחד.
+          כלי תרגול לחינוך פיננסי בכיתה י׳: הכנסה מעבודה ותקציב, חיסכון וריבית, שוק ההון, נדל"ן, סיכון ותשואה, פיזור, אופק השקעה ואינפלציה.
+        </p>
+        <ul>
+          {STAGES.map((st) => (
+            <li key={st.n}>
+              שלב {st.n}, {st.name}: תקציב ₪{st.budget.toLocaleString('he-IL')}. {st.intro[0]}
+            </li>
+          ))}
+        </ul>
+        <p>
+          כל שלב משחק מחדש את השנים 2017 עד 2024, כך שאפשר להשוות בין העולמות באותן שנים. כל סבב הוא שנה אחת, והמורה מקדם את השנה בכפתור "לשנה
+          הבאה".
         </p>
 
         <h4>עבודה בקיץ</h4>
@@ -42,7 +83,7 @@ export const InfoModal: React.FC = () => {
         <h4>הנתונים</h4>
         <p>
           תשואות מדד ת"א-125, מדד מחירי הדירות, האינפלציה וריבית בנק ישראל הם נתוני אמת שנתיים. פיקדון מחושב בקירוב לפי הריבית הממוצעת של
-          בנק ישראל באותה שנה, ולדירה להשקעה נוספה הנחה של 3% שכירות. המניה הבודדת והקואופרטיב בנגב בדויים, ומסומנים כך במשחק. מומלץ לאמת את
+          בנק ישראל באותה שנה, פיקדון צמוד למדד מרוויח בדיוק את שינוי המדד (פישוט), ולדירה להשקעה נוספה הנחה של 3% שכירות. המניה הבודדת בדויה, ומסומנת כך במשחק. מומלץ לאמת את
           המספרים מול המקור לפני שימוש בכיתה.
         </p>
         <table className="data-table">

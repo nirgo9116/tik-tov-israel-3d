@@ -10,6 +10,7 @@ import { Railway, Train, Traffic } from './components/world/Transport';
 import { TrainRideBanner } from './components/ui/TrainRideBanner';
 import { InteriorScene } from './components/world/InteriorScene';
 import { StationInfoModal } from './components/ui/StationInfoModal';
+import { StageIntroModal } from './components/ui/StageIntroModal';
 import { runStation } from './components/ui/stations';
 import { PaycheckModal } from './components/ui/PaycheckModal';
 import { HUD } from './components/ui/HUD';
@@ -31,7 +32,7 @@ export const App: React.FC = () => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const s = useGameStore.getState();
-      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo;
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo || s.stageIntroOpen;
       if (s.tutorialOpen || s.paycheck || s.trainRide) return;
 
       if (e.code === 'KeyP' || e.code === 'Tab') {
@@ -124,6 +125,7 @@ export const App: React.FC = () => {
       <JobsModal />
       <TrainRideBanner />
       <StationInfoModal />
+      <StageIntroModal />
     </div>
   );
 };
