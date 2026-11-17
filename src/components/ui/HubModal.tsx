@@ -20,6 +20,7 @@ export const HubModal: React.FC = () => {
   const liteMode = useGameStore((s) => s.liteMode);
   const startJob = useGameStore((s) => s.startJob);
   const resetGame = useGameStore((s) => s.resetGame);
+  const setOrchardMode = useGameStore((s) => s.setOrchardMode);
   const finishJobNow = useGameStore((s) => s.finishJobNow);
 
   const [thought, setThought] = useState('');
@@ -241,6 +242,12 @@ export const HubModal: React.FC = () => {
           })}
         </div>
 
+        {openHub === 'jerusalem' && (
+          <p className="orchard-intro">
+            🌳 כל פיקדון הוא עץ בפרדס שליד הבנק. בסוף כל שנה הריבית גדלה על העץ כפירות. אם שותלים אותם מחדש, העץ גדל ונותן יותר פירות בשנה הבאה: זו ריבית דריבית.
+          </p>
+        )}
+
         {JOBS.filter((j) => j.city === openHub).map((job) => {
           const workedThisYear = jobYear === year;
           const busy = Boolean(activeJob);
@@ -280,6 +287,18 @@ export const HubModal: React.FC = () => {
                   <CheckCircle2 size={15} className="text-emerald inline-icon" />
                   <strong>{h.name}</strong> — {h.mortgage ? `שווי הדירה ${shekel(h.mortgage.propertyValue)}, יתרת משכנתא ${shekel(h.mortgage.loan)}, ההון העצמי שלכם ${shekel(h.currentValue)}` : `שווי ${shekel(h.currentValue)}`} (הושקעו {shekel(h.invested)}, מאז {h.sinceYear})
                 </div>
+                {h.orchard && (
+                  <div className="orchard-mode" role="group" aria-label="מה עושים עם הפירות">
+                    <span>🌳 פירות (ריבית) בסוף השנה:</span>
+                    <button className={`chip${h.orchard.mode === 'replant' ? ' on' : ''}`} onClick={() => setOrchardMode(h.id, 'replant')}>
+                      לשתול מחדש (ריבית דריבית)
+                    </button>
+                    <button className={`chip${h.orchard.mode === 'pick' ? ' on' : ''}`} onClick={() => setOrchardMode(h.id, 'pick')}>
+                      לקטוף לכסף הפנוי
+                    </button>
+                    {h.orchard.lastFruit > 0 && <span className="orchard-last">בשנה שעברה: {shekel(h.orchard.lastFruit)}{h.orchard.lastRealPositive ? '' : ' (פחות מהאינפלציה)'}</span>}
+                  </div>
+                )}
                 <button
                   className="btn-sell"
                   disabled={over || !reasonOk}

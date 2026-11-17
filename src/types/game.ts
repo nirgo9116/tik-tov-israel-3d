@@ -34,6 +34,8 @@ export interface Holding {
   partners?: string[];
   /** Apartment bought with a down payment and a mortgage. currentValue = propertyValue - loan (equity). */
   mortgage?: { propertyValue: number; loan: number; yearsLeft: number; lastRent?: number; lastPayment?: number };
+  /** Savings shown as a fruit tree: each year's interest is the fruit. */
+  orchard?: { mode: 'replant' | 'pick'; lastFruit: number; lastRealPositive: boolean; pickedTotal: number };
 }
 
 export interface JournalEntry {

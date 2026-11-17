@@ -477,6 +477,7 @@ interface GameState {
   /** Click/tap-to-walk destination [x, z]. */
   moveTarget: [number, number] | null;
   setMoveTarget: (t: [number, number] | null) => void;
+  setOrchardMode: (holdingId: string, mode: 'replant' | 'pick') => void;
   /** An info station whose panel is open. */
   stationInfo: string | null;
 
@@ -625,6 +626,11 @@ export const useGameStore = create<GameState>()(
   },
   setStationInfo: (id) => set({ stationInfo: id }),
   setMoveTarget: (t) => set({ moveTarget: t }),
+  setOrchardMode: (id, mode) =>
+    set((s) => ({
+      holdings: s.holdings.map((h) => (h.id === id && h.orchard ? { ...h, orchard: { ...h.orchard, mode } } : h)),
+      toastMessage: mode === 'replant' ? 'הפירות יישתלו מחדש: העץ יגדל וייתן יותר פירות (ריבית דריבית).' : 'הפירות ייקטפו בסוף כל שנה ויעברו לכסף הפנוי. העץ יישאר באותו גודל.',
+    })),
   finishTrainRide: () => {
     const ride = get().trainRide;
     if (!ride) return;
@@ -717,6 +723,7 @@ export const useGameStore = create<GameState>()(
             fictional: product.fictional,
             partners: product.partners,
             mortgage,
+            orchard: product.category === 'bank' ? { mode: 'replant', lastFruit: 0, lastRealPositive: true, pickedTotal: 0 } : undefined,
           },
         ];
 
@@ -809,6 +816,16 @@ export const useGameStore = create<GameState>()(
     // Apartments: value follows the housing index, rent comes in as cash, the mortgage payment goes out
     let cashFlow = 0;
     const holdings = s.holdings.map((h) => {
+      if (h.orchard) {
+        // Savings tree: the year's interest is the fruit. Replant = compound interest, pick = to free cash.
+        const fruit = Math.round((h.currentValue * data.returns[h.assetKey]) / 100);
+        const realPositive = data.returns[h.assetKey] > data.cpi;
+        if (h.orchard.mode === 'pick') {
+          cashFlow += fruit;
+          return { ...h, orchard: { ...h.orchard, lastFruit: fruit, lastRealPositive: realPositive, pickedTotal: h.orchard.pickedTotal + fruit } };
+        }
+        return { ...h, currentValue: h.currentValue + fruit, orchard: { ...h.orchard, lastFruit: fruit, lastRealPositive: realPositive } };
+      }
       if (!h.mortgage) return { ...h, currentValue: Math.max(0, Math.round(h.currentValue * (1 + data.returns[h.assetKey] / 100))) };
       const m = h.mortgage;
       const rent = Math.round((m.propertyValue * RENT_YIELD) / 100);

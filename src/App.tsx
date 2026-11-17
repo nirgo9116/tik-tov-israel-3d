@@ -10,6 +10,7 @@ import { Railway, Train, Traffic } from './components/world/Transport';
 import { TrainRideBanner } from './components/ui/TrainRideBanner';
 import { InteriorScene } from './components/world/InteriorScene';
 import { StageTower } from './components/world/PortfolioTower';
+import { Orchard } from './components/world/Orchard';
 import { WalkMarker, WalkPlane } from './components/world/WalkTarget';
 import { StationInfoModal } from './components/ui/StationInfoModal';
 import { StageIntroModal } from './components/ui/StageIntroModal';
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
   const liteMode = useGameStore((s) => s.liteMode);
   const highGraphics = useGameStore((s) => s.highGraphics);
   const interior = useGameStore((s) => s.interior);
+  const stage = useGameStore((s) => s.stage);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -111,6 +113,7 @@ export const App: React.FC = () => {
             <Train />
             <Traffic />
             <StageTower />
+            {stage === 1 && <Orchard />}
             <WalkPlane size={[60, 100]} />
             <WalkMarker />
             </>
