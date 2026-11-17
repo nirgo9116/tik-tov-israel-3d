@@ -5,3 +5,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Major versions (React 19, Vite 8...) break the 3D libraries; those are upgraded by hand.
+    # Security fixes still arrive through Dependabot security updates.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
