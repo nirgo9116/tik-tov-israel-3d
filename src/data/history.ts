@@ -18,6 +18,11 @@
  *               data). 2017–2023: yearly averages as listed on primeinv.co.il; 2024: average of the
  *               12 monthly BoI figures as listed on mashcantaman.co.il. Used as a simplified variable rate.
  *
+ * - sector*:    TASE sector indices, nominal annual change in %, from the TASE annual reviews
+ *               (2018 review: 2017–2018; 2019 review: 2019; 2020 review: technology 2020; 2022 review:
+ *               2020–2022; 2023 review: oil & gas 2023; 2024 review: 2023–2024). Banks = TA-Banks5,
+ *               Real estate = TA-Real Estate, Tech = TA-Technology, Energy = TA-Oil & Gas.
+ *
  * Fictional series (shown in the game with a "בדוי" tag, for teaching only):
  * - fictionalStock: a made-up single tech company, to show concentration risk.
  * - fictionalCoop:  a made-up regional solar co-op.
@@ -30,6 +35,10 @@ export type AssetKey =
   | 'housing'
   | 'housingRent'
   | 'fictionalStock'
+  | 'sectorBanks'
+  | 'sectorRealEstate'
+  | 'sectorTech'
+  | 'sectorEnergy'
   | 'fictionalCoop';
 
 export interface YearData {
@@ -48,6 +57,18 @@ export const RENT_YIELD = 3;
 export const MAX_LTV_INVESTMENT = 0.5;
 /** Mortgage term used in the game (years). */
 export const MORTGAGE_YEARS = 25;
+
+const SECTORS: Record<number, [number, number, number, number]> = {
+  // [banks, real estate, technology, oil & gas]
+  2017: [24, 23, 14, -18],
+  2018: [5, -11, 2, 4],
+  2019: [23, 65, 52, -6],
+  2020: [-21.8, -4.6, 38, -44.8],
+  2021: [67.9, 53.4, 9, 61.7],
+  2022: [-4.0, -28.0, -26, 39.0],
+  2023: [10.5, 7.8, 17.0, 33.6],
+  2024: [37.9, 25.7, 10.3, 32.3],
+};
 
 const MORTGAGE_RATE: Record<number, number> = { 2017: 4.77, 2018: 4.35, 2019: 4.17, 2020: 3.53, 2021: 3.28, 2022: 4.08, 2023: 5.07, 2024: 5.05 };
 
@@ -183,6 +204,10 @@ export const HISTORY: YearData[] = raw.map((r) => ({
     housingRent: r.housing + RENT_YIELD,
     fictionalStock: r.fictionalStock,
     fictionalCoop: r.fictionalCoop,
+    sectorBanks: SECTORS[r.year][0],
+    sectorRealEstate: SECTORS[r.year][1],
+    sectorTech: SECTORS[r.year][2],
+    sectorEnergy: SECTORS[r.year][3],
   },
 }));
 
@@ -202,5 +227,6 @@ export const SOURCES: Array<{ label: string; url: string }> = [
   { label: 'ריבית בנק ישראל', url: 'https://www.boi.org.il' },
   { label: 'ריבית ממוצעת על משכנתאות לא צמודות, 2017–2023 (לפי נתוני בנק ישראל)', url: 'https://primeinv.co.il/%D7%A8%D7%99%D7%91%D7%99%D7%95%D7%AA-%D7%9E%D7%A9%D7%9B%D7%A0%D7%AA%D7%90/' },
   { label: 'ריבית ממוצעת על משכנתאות לא צמודות, 2024 (לפי נתוני בנק ישראל)', url: 'https://mashcantaman.co.il/%D7%A8%D7%99%D7%91%D7%99%D7%AA-%D7%9E%D7%A9%D7%9B%D7%A0%D7%AA%D7%90-%D7%9E%D7%9E%D7%95%D7%A6%D7%A2%D7%AA/' },
+  { label: 'מדדי הענפים בבורסה (בנקים-5, נדל"ן, טכנולוגיה, נפט וגז): הסקירות השנתיות של הבורסה 2018–2024', url: 'https://content.tase.co.il/media/zlupjwg3/2024_annualreview_heb.pdf' },
   { label: 'הוראת ניהול בנקאי תקין 329: עד 50% מימון לדירה להשקעה', url: 'https://boi.org.il/media/uwaetnrb/447.pdf' },
 ];

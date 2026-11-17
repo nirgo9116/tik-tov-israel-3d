@@ -16,6 +16,10 @@ export const SLICE_STYLE: Record<string, { label: string; color: string }> = {
   fictionalStock: { label: 'מניה בודדת (בדויה)', color: '#ec4899' },
   housingRent: { label: 'דירה להשקעה', color: '#f59e0b' },
   housing: { label: 'קבוצת רכישה', color: '#f97316' },
+  sectorBanks: { label: 'ענף הבנקים', color: '#0ea5e9' },
+  sectorTech: { label: 'ענף הטכנולוגיה', color: '#8b5cf6' },
+  sectorEnergy: { label: 'ענף האנרגיה', color: '#ef4444' },
+  sectorRealEstate: { label: 'ענף הנדל"ן בבורסה', color: '#a3a3a3' },
   mortgaged: { label: 'דירה (הון עצמי)', color: '#eab308' },
 };
 

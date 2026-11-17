@@ -183,6 +183,20 @@ const Props: React.FC<{ id: CityHubId; accent: string }> = ({ id, accent }) => {
             </group>
           </group>
         ))}
+        {/* Sector wings: a coloured floor zone for each sector */}
+        {(
+          [
+            [-6, -5, '#0ea5e9'],
+            [6, -5, '#8b5cf6'],
+            [-7.5, 1.8, '#ef4444'],
+            [7.5, -2.4, '#a3a3a3'],
+          ] as Array<[number, number, string]>
+        ).map(([x, z, c]) => (
+          <mesh key={`${x}${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.015, z]}>
+            <planeGeometry args={[4, 3]} />
+            <meshStandardMaterial color={c} transparent opacity={0.35} />
+          </mesh>
+        ))}
         {/* Ticker strip above the index wall */}
         <mesh position={[0, 4.25, -ROOM_HALF_D + 0.08]}>
           <boxGeometry args={[ROOM_HALF_W * 2 - 0.4, 0.4, 0.05]} />

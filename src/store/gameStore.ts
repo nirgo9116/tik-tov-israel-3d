@@ -149,6 +149,50 @@ export interface ProductOption {
   mortgage?: boolean;
 }
 
+/** One product per TASE sector index (real past data). */
+const SECTOR_PRODUCT: Record<'sectorBanks' | 'sectorTech' | 'sectorEnergy' | 'sectorRealEstate', ProductOption> = {
+  sectorBanks: {
+    id: 'tlv-banks',
+    name: 'ענף הבנקים (מדד ת"א-בנקים5)',
+    region: 'תל אביב',
+    category: 'index',
+    assetKey: 'sectorBanks',
+    riskLevel: 'גבוה',
+    description: 'חמשת הבנקים הגדולים. כשהריבית עולה הבנקים מרוויחים לרוב יותר, אבל במשבר הם נפגעים. ענף אחד = פחות פיזור.',
+    howItEarns: 'שינוי מדד ת"א-בנקים5 באותה שנה',
+  },
+  sectorTech: {
+    id: 'tlv-tech',
+    name: 'ענף הטכנולוגיה (מדד ת"א-טכנולוגיה)',
+    region: 'תל אביב',
+    category: 'index',
+    assetKey: 'sectorTech',
+    riskLevel: 'גבוה',
+    description: 'חברות הייטק ותוכנה. יכולות לצמוח מהר, ולרדת חזק כשהריבית עולה.',
+    howItEarns: 'שינוי מדד ת"א-טכנולוגיה באותה שנה',
+  },
+  sectorEnergy: {
+    id: 'tlv-energy',
+    name: 'ענף האנרגיה (מדד ת"א-נפט וגז)',
+    region: 'תל אביב',
+    category: 'index',
+    assetKey: 'sectorEnergy',
+    riskLevel: 'גבוה',
+    description: 'חברות ושותפויות גז ונפט. תלויות מאוד במחירי האנרגיה בעולם, ולכן קופצות למעלה ולמטה.',
+    howItEarns: 'שינוי מדד ת"א-נפט וגז באותה שנה',
+  },
+  sectorRealEstate: {
+    id: 'tlv-realestate',
+    name: 'ענף הנדל"ן בבורסה (מדד ת"א-נדל"ן)',
+    region: 'תל אביב',
+    category: 'index',
+    assetKey: 'sectorRealEstate',
+    riskLevel: 'גבוה',
+    description: 'מניות של חברות נדל"ן (קניונים, משרדים, בנייה). זו לא דירה: אפשר לקנות ולמכור בכל יום, אבל המחיר זז הרבה.',
+    howItEarns: 'שינוי מדד ת"א-נדל"ן באותה שנה',
+  },
+};
+
 export const HUB_PRODUCTS: Record<CityHubId, ProductOption[]> = {
   jerusalem: [
     {
@@ -197,6 +241,7 @@ export const HUB_PRODUCTS: Record<CityHubId, ProductOption[]> = {
     },
   ],
   telaviv: [
+    ...(['sectorBanks', 'sectorTech', 'sectorEnergy', 'sectorRealEstate'] as const).map((key) => SECTOR_PRODUCT[key]),
     {
       id: 'tlv-ta125',
       name: 'קרן מחקת מדד ת"א-125',
@@ -245,6 +290,7 @@ const STAGE_MISSIONS: Record<StageNum, Mission[]> = {
   ],
   2: [
     { id: 's2a', title: 'אופק ארוך', regionHint: 'הבורסה בתל אביב', description: 'החזיקו קרן מחקת מדד לפחות שלוש שנים ברציפות.', completed: false },
+    { id: 's2c', title: 'פיזור בין ענפים', regionHint: 'אגפי הבורסה', description: 'החזיקו לפחות שלושה ענפים שונים באותו זמן (או קרן מדד ועוד שני ענפים).', completed: false },
     { id: 's2b', title: 'בלי לשים הכול על מניה אחת', regionHint: 'הבורסה בתל אביב', description: 'סיימו שנה עם השקעה במדד, כשהמניה הבודדת היא פחות מ-35% מהתיק.', completed: false },
   ],
   3: [
@@ -418,6 +464,7 @@ function checkMissions(missions: Mission[], holdings: Holding[], journal: Journa
     if (m.id === 's1a' && depositTotal >= 10000) return { ...m, completed: true };
     if (m.id === 's1b' && keys.has('deposit') && keys.has('cpiLinked')) return { ...m, completed: true };
     if (m.id === 's2a' && longIndex) return { ...m, completed: true };
+    if (m.id === 's2c' && ['sectorBanks', 'sectorTech', 'sectorEnergy', 'sectorRealEstate', 'ta125'].filter((k) => keys.has(k as AssetKey)).length >= 3) return { ...m, completed: true };
     if (m.id === 's2b' && yearEnd && keys.has('ta125') && stockShare < 0.35) return { ...m, completed: true };
     if (m.id === 's3a' && keys.has('housingRent')) return { ...m, completed: true };
     if (m.id === 's3b' && yearEnd && hasRealEstate && net > 0 && cash / net >= 0.1) return { ...m, completed: true };
