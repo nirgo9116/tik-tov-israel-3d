@@ -915,3 +915,7 @@ body { direction: rtl; }
 @media (max-width: 800px) { .board-focus-grid { grid-template-columns: 1fr; } }
 .board-dec-title { font-weight: 800; color: #fde68a; }
 .board-q { color: #facc15; font-weight: 700; }
+.student-code-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+.student-code-row label { white-space: nowrap; font-weight: 700; }
+.student-code-row .share-input { max-width: 160px; }
+.share-actions .share-btn { width: auto; flex: 1; margin-bottom: 0; }

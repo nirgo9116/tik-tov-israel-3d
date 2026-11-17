@@ -15,6 +15,7 @@ import { WalkMarker, WalkPlane } from './components/world/WalkTarget';
 import { StationInfoModal } from './components/ui/StationInfoModal';
 import { StageIntroModal } from './components/ui/StageIntroModal';
 import { ShareModal } from './components/ui/ShareModal';
+import { SaveModal } from './components/ui/SaveModal';
 import { ClassBoard } from './components/ui/ClassBoard';
 import { runStation } from './components/ui/stations';
 import { PaycheckModal } from './components/ui/PaycheckModal';
@@ -41,7 +42,7 @@ export const App: React.FC = () => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const s = useGameStore.getState();
-      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo || s.stageIntroOpen || s.shareOpen || s.classBoardOpen;
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo || s.stageIntroOpen || s.shareOpen || s.classBoardOpen || s.saveOpen;
       if (s.tutorialOpen || s.paycheck || s.trainRide) return;
 
       if (e.code === 'KeyI' && !anyOpen) {
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
         if (s.jobsOpen) s.setJobsOpen(false);
         if (s.stationInfo) s.setStationInfo(null);
         if (s.shareOpen) s.setShareOpen(false);
+        if (s.saveOpen) s.setSaveOpen(false);
         if (s.classBoardOpen) s.setClassBoardOpen(false);
         if (!anyOpen && s.interior) s.exitBuilding();
       } else if (s.interior) {
@@ -148,6 +150,7 @@ export const App: React.FC = () => {
       <StationInfoModal />
       <StageIntroModal />
       <ShareModal />
+      <SaveModal />
       {classBoardOpen && <ClassBoard onClose={() => setClassBoardOpen(false)} />}
     </div>
   );

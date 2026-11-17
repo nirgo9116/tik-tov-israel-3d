@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Copy, Download, Send, X } from 'lucide-react';
-import { stageInfo, useGameStore } from '../../store/gameStore';
+import { cleanStudentCode, stageInfo, useGameStore } from '../../store/gameStore';
 import { composition } from '../../data/composition';
 import { buildShareCode, decisionFromEntry } from '../../data/share';
 
@@ -9,7 +9,8 @@ export const ShareModal: React.FC = () => {
   const open = useGameStore((s) => s.shareOpen);
   const close = useGameStore((s) => s.setShareOpen);
   const s = useGameStore();
-  const [nick, setNick] = useState('');
+  const nick = useGameStore((st) => st.studentCode);
+  const setNick = useGameStore((st) => st.setStudentCode);
   const [pick, setPick] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const decisions = s.journal.filter((j) => j.thoughtBefore.trim());
@@ -35,7 +36,6 @@ export const ShareModal: React.FC = () => {
   }, [open, nick, pick, s.journal, s.holdings, s.cash, s.year, s.stage]);
 
   if (!open) return null;
-  const nickHasSpace = /\s/.test(nick.trim()) && nick.trim().split(/\s+/).length >= 2;
 
   return (
     <div className="modal-backdrop" onClick={() => close(false)}>
@@ -56,10 +56,10 @@ export const ShareModal: React.FC = () => {
         </div>
 
         <label className="share-label" htmlFor="share-nick">
-          1. כינוי (לא שם מלא). אפשר להשאיר ריק:
+          1. קוד התלמיד שקיבלתם מהמורה (לא שם):
         </label>
-        <input id="share-nick" className="share-input" maxLength={20} value={nick} onChange={(e) => setNick(e.target.value)} placeholder="למשל: הנמר הכחול" />
-        {nickHasSpace && <div className="hint-small">רק כינוי, בלי שם פרטי ושם משפחה.</div>}
+        <input id="share-nick" className="share-input" maxLength={10} value={nick} onChange={(e) => setNick(cleanStudentCode(e.target.value))} placeholder="למשל: י3-07" />
+        <div className="hint-small">רק אותיות, ספרות ומקף, עד 10 תווים. המורה יודע של מי הקוד, והכיתה לא.</div>
 
         <label className="share-label" htmlFor="share-decision">
           2. החלטה אחת שאתם רוצים להציג לכיתה (לא חובה):

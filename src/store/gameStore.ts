@@ -71,6 +71,9 @@ export const stageInfo = (n: StageNum) => STAGES[n - 1];
 /** The stage a city belongs to (Be'er Sheva has only a summer job). */
 export const cityStage = (id: CityHubId): StageNum | null => STAGES.find((st) => st.city === id)?.n ?? null;
 export const MIN_REASONING_CHARS = 15;
+/** Student codes: letters, digits and dashes only, up to 10 characters (so no full names). */
+export const cleanStudentCode = (t: string) => t.replace(/[^\p{L}\p{N}-]/gu, '').slice(0, 10);
+
 /** Letters typed (Hebrew or English), ignoring symbols like "////". */
 export const letterCount = (t: string) => (t.match(/\p{L}/gu) ?? []).length;
 /** A real sentence: enough letters and at least three words. */
@@ -536,6 +539,11 @@ interface GameState {
   trainOpen: boolean;
   infoOpen: boolean;
   shareOpen: boolean;
+  saveOpen: boolean;
+  setSaveOpen: (open: boolean) => void;
+  /** Code the teacher gives each student (e.g. י3-07). Never a name. */
+  studentCode: string;
+  setStudentCode: (code: string) => void;
   classBoardOpen: boolean;
   presentMode: boolean;
   setShareOpen: (open: boolean) => void;
@@ -704,6 +712,10 @@ export const useGameStore = create<GameState>()(
   setTrainOpen: (open) => set({ trainOpen: open, openHub: null, tikOpen: false }),
   setInfoOpen: (open) => set({ infoOpen: open }),
   shareOpen: false,
+  saveOpen: false,
+  setSaveOpen: (open) => set({ saveOpen: open, tikOpen: open ? false : get().tikOpen }),
+  studentCode: '',
+  setStudentCode: (code) => set({ studentCode: cleanStudentCode(code) }),
   classBoardOpen: false,
   presentMode: readFlag('tiktov-present'),
   setShareOpen: (open) => set({ shareOpen: open, tikOpen: open ? false : get().tikOpen }),
@@ -1115,6 +1127,7 @@ export const useGameStore = create<GameState>()(
         startCash: s.startCash,
         stageResults: s.stageResults,
         stageSaves: s.stageSaves,
+        studentCode: s.studentCode,
         snapshots: s.snapshots,
       }),
     }

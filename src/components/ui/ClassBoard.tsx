@@ -41,7 +41,7 @@ export const ClassBoard: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </h1>
         <div className="board-tools">
           <button className="btn-mini" onClick={() => setHideNames(!hideNames)}>
-            {hideNames ? <EyeOff size={16} /> : <Eye size={16} />} {hideNames ? 'שמות מוסתרים' : 'כינויים מוצגים'}
+            {hideNames ? <EyeOff size={16} /> : <Eye size={16} />} {hideNames ? 'קודי תלמיד מוסתרים' : 'קודי תלמיד מוצגים'}
           </button>
           <button className="btn-mini" onClick={() => { setResults([]); setFocus(null); }}>
             <Trash2 size={16} /> ניקוי הלוח

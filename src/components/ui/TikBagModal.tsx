@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack, RotateCcw, PieChart, Send } from 'lucide-react';
+import { X, CheckCircle, Circle, BookOpen, Award, Target, Backpack, RotateCcw, PieChart, Send, Save } from 'lucide-react';
 import { MIN_REASONING_CHARS, isReasonOk, STAGES, stageInfo, useGameStore } from '../../store/gameStore';
 import { composition } from '../../data/composition';
 import { Donut, MixByYear, MixLegend } from './Composition';
@@ -48,6 +48,8 @@ export const TikBagModal: React.FC = () => {
   const startCash = useGameStore((s) => s.startCash);
   const stageResults = useGameStore((s) => s.stageResults);
   const snapshots = useGameStore((s) => s.snapshots);
+  const studentCode = useGameStore((s) => s.studentCode);
+  const setStudentCode = useGameStore((s) => s.setStudentCode);
 
   if (!tikOpen) return null;
 
@@ -111,9 +113,25 @@ export const TikBagModal: React.FC = () => {
         <div className="phone-body">
           {tikTab === 'bag' && (
             <div className="phone-section">
-              <button className="btn-invest share-btn" onClick={() => useGameStore.getState().setShareOpen(true)}>
-                <Send size={16} /> שליחת התוצאות למורה
-              </button>
+              <div className="student-code-row">
+                <label htmlFor="student-code">קוד תלמיד (מהמורה):</label>
+                <input
+                  id="student-code"
+                  className="share-input"
+                  maxLength={10}
+                  value={studentCode}
+                  onChange={(e) => setStudentCode(e.target.value)}
+                  placeholder="למשל: י3-07"
+                />
+              </div>
+              <div className="share-actions">
+                <button className="btn-invest share-btn" onClick={() => useGameStore.getState().setShareOpen(true)}>
+                  <Send size={16} /> שליחת התוצאות למורה
+                </button>
+                <button className="btn-mini" onClick={() => useGameStore.getState().setSaveOpen(true)}>
+                  <Save size={16} /> שמירה והמשך במחשב אחר
+                </button>
+              </div>
               {over && (
                 <div className="summary-card">
                   <h4>סיכום {stageInfo(stage).name} ({FIRST_YEAR}–{year - 1})</h4>
