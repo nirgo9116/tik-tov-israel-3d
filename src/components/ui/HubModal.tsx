@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Users, AlertTriangle, CheckCircle2, MapPin, FlaskConical, Briefcase } from 'lucide-react';
 import { CITY_HUBS, HUB_PRODUCTS, JOBS, MIN_REASONING_CHARS, isReasonOk, letterCount, useGameStore } from '../../store/gameStore';
+import { MAX_LTV_INVESTMENT, MORTGAGE_YEARS, RENT_YIELD, annualPayment, yearData } from '../../data/history';
 
 const shekel = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`;
 const riskClass: Record<string, string> = { נמוך: 'low', בינוני: 'medium', גבוה: 'high' };
@@ -24,6 +25,7 @@ export const HubModal: React.FC = () => {
   const [thought, setThought] = useState('');
   const [amounts, setAmounts] = useState<Record<string, number>>({});
   const [done, setDone] = useState<string | null>(null);
+  const [ltvs, setLtvs] = useState<Record<string, number>>({});
 
   if (!openHub) return null;
 
@@ -113,8 +115,14 @@ export const HubModal: React.FC = () => {
 
         <div className="products-grid">
           {products.map((p) => {
-            const amount = amounts[p.id] ?? Math.min(10000, Math.floor(cash / 1000) * 1000);
+            const amount = amounts[p.id] ?? (p.mortgage ? round(cash * 0.5) : Math.min(10000, Math.floor(cash / 1000) * 1000));
             const valid = amount >= 1000 && amount <= cash;
+            const ltv = p.mortgage ? ltvs[p.id] ?? 0 : 0;
+            const rate = yearData(Math.min(year, 2024))?.mortgageRate ?? 0;
+            const price = Math.round(amount / (1 - ltv));
+            const loan = price - amount;
+            const pay = Math.round(annualPayment(loan, rate, MORTGAGE_YEARS));
+            const rent = Math.round((price * RENT_YIELD) / 100);
             return (
               <div key={p.id} className="product-card">
                 <div className="product-top">
@@ -138,6 +146,54 @@ export const HubModal: React.FC = () => {
                     <AlertTriangle size={14} /> ריכוז של יותר מ-35% מהתיק בנכס כזה מוריד את ציון הפיזור
                   </div>
                 )}
+                {p.mortgage && (
+                  <div className="mortgage-box">
+                    <div className="mortgage-row">
+                      <span>משכנתא (כמה מהמחיר לוקחים מהבנק):</span>
+                      <div className="amount-chips">
+                        {[0, 0.25, MAX_LTV_INVESTMENT].map((v) => (
+                          <button key={v} type="button" className={`chip${ltv === v ? ' on' : ''}`} onClick={() => setLtvs({ ...ltvs, [p.id]: v })}>
+                            {v === 0 ? 'בלי משכנתא' : `${v * 100}%`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="mortgage-grid">
+                      <div>
+                        <span>מחיר הדירה</span>
+                        <b>{shekel(price)}</b>
+                      </div>
+                      <div>
+                        <span>הון עצמי (שלכם)</span>
+                        <b>{shekel(amount)}</b>
+                      </div>
+                      <div>
+                        <span>משכנתא מהבנק</span>
+                        <b>{shekel(loan)}</b>
+                      </div>
+                      <div>
+                        <span>ריבית המשכנתא ב-{Math.min(year, 2024)}</span>
+                        <b>{rate}%</b>
+                      </div>
+                      <div>
+                        <span>החזר חודשי (בערך, {MORTGAGE_YEARS} שנה)</span>
+                        <b>{shekel(pay / 12)}</b>
+                      </div>
+                      <div>
+                        <span>שכירות חודשית (הנחה: {RENT_YIELD}% בשנה)</span>
+                        <b>{shekel(rent / 12)}</b>
+                      </div>
+                    </div>
+                    <div className={`mortgage-flow ${rent - pay >= 0 ? 'pos' : 'neg'}`}>
+                      תזרים חודשי: {rent - pay >= 0 ? '+' : '−'}
+                      {shekel(Math.abs(rent - pay) / 12)}{' '}
+                      {rent - pay >= 0 ? '(השכירות מכסה את ההחזר)' : '(ההחזר גדול מהשכירות: ההפרש יוצא מהכסף הפנוי)'}
+                    </div>
+                    <p className="mortgage-note">
+                      בנק ישראל מתיר משכנתא של עד 50% ממחיר דירה להשקעה. משכנתא מגדילה את הרווח כשמחירי הדירות עולים, ואת ההפסד כשהם יורדים.
+                    </p>
+                  </div>
+                )}
                 <div className="product-footer">
                   <div className="amount-chips" aria-label="סכום מהיר">
                     {[
@@ -152,7 +208,7 @@ export const HubModal: React.FC = () => {
                     ))}
                   </div>
                   <label className="amount-input">
-                    2. סכום (₪)
+                    {p.mortgage ? '2. הון עצמי (₪)' : '2. סכום (₪)'}
                     <input
                       type="number"
                       min={1000}
@@ -167,13 +223,17 @@ export const HubModal: React.FC = () => {
                     disabled={over || !valid || !reasonOk}
                     title={!reasonOk ? 'קודם כותבים הנמקה ביומן' : undefined}
                     onClick={() => {
-                      if (investAction(p, amount, thought)) {
+                      if (investAction(p, amount, thought, ltv)) {
                         setThought('');
-                        setDone(`הושקעו ${shekel(amount)} ב${p.name}. רואים את זה בתיק ובהרכב התיק. אפשר להשקיע עוד (עם נימוק חדש) או לסגור.`);
+                        setDone(
+                          p.mortgage && loan > 0
+                            ? `קניתם דירה ב-${shekel(price)}: ${shekel(amount)} הון עצמי ו-${shekel(loan)} משכנתא. בכל שנה השכירות תיכנס לכסף הפנוי וההחזר ייצא ממנו.`
+                            : `הושקעו ${shekel(amount)} ב${p.name}. רואים את זה בתיק ובהרכב התיק. אפשר להשקיע עוד (עם נימוק חדש) או לסגור.`
+                        );
                       }
                     }}
                   >
-                    {over ? 'השלב הסתיים' : !reasonOk ? 'קודם כותבים נימוק' : !valid ? (cash < 1000 ? 'אין מספיק כסף פנוי' : 'סכום לא תקין') : `3. השקעה של ${shekel(amount)}`}
+                    {over ? 'השלב הסתיים' : !reasonOk ? 'קודם כותבים נימוק' : !valid ? (cash < 1000 ? 'אין מספיק כסף פנוי' : 'סכום לא תקין') : p.mortgage ? `3. קנייה של דירה ב-${shekel(price)}` : `3. השקעה של ${shekel(amount)}`}
                   </button>
                 </div>
               </div>
@@ -218,7 +278,7 @@ export const HubModal: React.FC = () => {
               <div key={h.id} className="position-row">
                 <div>
                   <CheckCircle2 size={15} className="text-emerald inline-icon" />
-                  <strong>{h.name}</strong> — שווי {shekel(h.currentValue)} (הושקעו {shekel(h.invested)}, מאז {h.sinceYear})
+                  <strong>{h.name}</strong> — {h.mortgage ? `שווי הדירה ${shekel(h.mortgage.propertyValue)}, יתרת משכנתא ${shekel(h.mortgage.loan)}, ההון העצמי שלכם ${shekel(h.currentValue)}` : `שווי ${shekel(h.currentValue)}`} (הושקעו {shekel(h.invested)}, מאז {h.sinceYear})
                 </div>
                 <button
                   className="btn-sell"

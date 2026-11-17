@@ -16,12 +16,16 @@ export const SLICE_STYLE: Record<string, { label: string; color: string }> = {
   fictionalStock: { label: 'מניה בודדת (בדויה)', color: '#ec4899' },
   housingRent: { label: 'דירה להשקעה', color: '#f59e0b' },
   housing: { label: 'קבוצת רכישה', color: '#f97316' },
+  mortgaged: { label: 'דירה (הון עצמי)', color: '#eab308' },
 };
 
 /** Free cash first, then each asset kind, summed over holdings. Empty slices are left out. */
 export function composition(cash: number, holdings: Holding[]): Slice[] {
   const byKey = new Map<string, number>();
-  for (const h of holdings) byKey.set(h.assetKey, (byKey.get(h.assetKey) ?? 0) + h.currentValue);
+  for (const h of holdings) {
+    const k = h.mortgage && h.mortgage.loan > 0 ? 'mortgaged' : h.assetKey;
+    byKey.set(k, (byKey.get(k) ?? 0) + h.currentValue);
+  }
   const out: Slice[] = [];
   if (cash > 0) out.push({ key: 'cash', ...SLICE_STYLE.cash, value: cash });
   for (const [key, value] of byKey) {

@@ -177,6 +177,11 @@ export const TikBagModal: React.FC = () => {
                       <div className="row-sub">
                         {h.region} • סיכון {h.riskLevel} • מאז {h.sinceYear}
                       </div>
+                      {h.mortgage && h.mortgage.loan > 0 && (
+                        <div className="row-sub">
+                          שווי הדירה {shekel(h.mortgage.propertyValue)} פחות משכנתא {shekel(h.mortgage.loan)} = ההון העצמי שלכם
+                        </div>
+                      )}
                     </div>
                     <strong>{shekel(h.currentValue)}</strong>
                   </div>

@@ -11,7 +11,7 @@ import {
   RubricBreakdown,
   YearEvent,
 } from '../types/game';
-import { AssetKey, FIRST_YEAR, LAST_YEAR, START_RATE, yearData } from '../data/history';
+import { AssetKey, FIRST_YEAR, LAST_YEAR, MAX_LTV_INVESTMENT, MORTGAGE_YEARS, RENT_YIELD, START_RATE, annualPayment, yearData } from '../data/history';
 import { nearestStation, railPath } from '../data/rail';
 import { composition, Slice } from '../data/composition';
 
@@ -145,6 +145,8 @@ export interface ProductOption {
   howItEarns: string;
   fictional?: boolean;
   partners?: string[];
+  /** Bought with a down payment and (optionally) a mortgage. */
+  mortgage?: boolean;
 }
 
 export const HUB_PRODUCTS: Record<CityHubId, ProductOption[]> = {
@@ -178,8 +180,9 @@ export const HUB_PRODUCTS: Record<CityHubId, ProductOption[]> = {
       category: 'realestate',
       assetKey: 'housingRent',
       riskLevel: 'בינוני',
-      description: 'שינוי מחירי הדירות ועוד דמי שכירות. בפועל קשה למכור דירה מהר (נזילות נמוכה), ויש הוצאות שלא נכללות כאן.',
-      howItEarns: 'מדד מחירי הדירות הארצי + 3% שכירות (הנחה)',
+      description: 'קונים דירה עם הון עצמי, ואפשר לקחת משכנתא על עד 50% ממחיר הדירה. השכירות נכנסת לכסף הפנוי, וההחזר החודשי יוצא ממנו. קשה למכור דירה מהר (נזילות נמוכה).',
+      howItEarns: 'שינוי מדד מחירי הדירות + שכירות 3% בשנה (הנחה), פחות ריבית המשכנתא',
+      mortgage: true,
     },
     {
       id: 'haifa-group',
@@ -512,7 +515,7 @@ interface GameState {
   travelTo: (id: CityHubId) => void;
   clearToast: () => void;
 
-  investAction: (product: ProductOption, amount: number, thoughtBefore: string) => boolean;
+  investAction: (product: ProductOption, amount: number, thoughtBefore: string, ltv?: number) => boolean;
   sellHolding: (holdingId: string, thoughtBefore: string) => boolean;
   addReflection: (entryId: string, text: string) => void;
   advanceYear: () => void;
@@ -667,7 +670,7 @@ export const useGameStore = create<GameState>()(
   },
   clearToast: () => set({ toastMessage: null }),
 
-  investAction: (product, amount, thoughtBefore) => {
+  investAction: (product, amount, thoughtBefore, ltv = 0) => {
     const s = get();
     if (s.isGameOver()) return false;
     const city = (Object.keys(HUB_PRODUCTS) as CityHubId[]).find((c) => HUB_PRODUCTS[c].some((p) => p.id === product.id));
@@ -685,6 +688,16 @@ export const useGameStore = create<GameState>()(
     }
 
     const existing = s.holdings.find((h) => h.id === product.id);
+    let mortgage: Holding['mortgage'];
+    if (product.mortgage) {
+      if (existing) {
+        set({ toastMessage: 'בשלב הזה קונים דירה אחת להשקעה. אפשר למכור אותה ולקנות אחרת.' });
+        return false;
+      }
+      const share = Math.min(MAX_LTV_INVESTMENT, Math.max(0, ltv));
+      const price = Math.round(amount / (1 - share));
+      mortgage = { propertyValue: price, loan: price - amount, yearsLeft: MORTGAGE_YEARS };
+    }
     const holdings: Holding[] = existing
       ? s.holdings.map((h) =>
           h.id === product.id ? { ...h, invested: h.invested + amount, currentValue: h.currentValue + amount } : h
@@ -703,6 +716,7 @@ export const useGameStore = create<GameState>()(
             riskLevel: product.riskLevel,
             fictional: product.fictional,
             partners: product.partners,
+            mortgage,
           },
         ];
 
@@ -710,7 +724,9 @@ export const useGameStore = create<GameState>()(
       id: `j-${Date.now()}`,
       year: s.year,
       holdingId: product.id,
-      actionTitle: `השקעתי ${fmt(amount)} ב${product.name}`,
+      actionTitle: mortgage && mortgage.loan > 0
+        ? `קניתי דירה ב-${fmt(mortgage.propertyValue)}: הון עצמי ${fmt(amount)} ומשכנתא ${fmt(mortgage.loan)}`
+        : `השקעתי ${fmt(amount)} ב${product.name}`,
       region: product.region,
       category: 'קנייה',
       amount,
@@ -790,15 +806,37 @@ export const useGameStore = create<GameState>()(
     const data = yearData(s.year);
     if (!data) return;
 
-    const holdings = s.holdings.map((h) => ({
-      ...h,
-      currentValue: Math.max(0, Math.round(h.currentValue * (1 + data.returns[h.assetKey] / 100))),
-    }));
+    // Apartments: value follows the housing index, rent comes in as cash, the mortgage payment goes out
+    let cashFlow = 0;
+    const holdings = s.holdings.map((h) => {
+      if (!h.mortgage) return { ...h, currentValue: Math.max(0, Math.round(h.currentValue * (1 + data.returns[h.assetKey] / 100))) };
+      const m = h.mortgage;
+      const rent = Math.round((m.propertyValue * RENT_YIELD) / 100);
+      const payment = Math.round(annualPayment(m.loan, data.mortgageRate, m.yearsLeft));
+      const interest = Math.round((m.loan * data.mortgageRate) / 100);
+      const loan = Math.max(0, m.loan - (payment - interest));
+      const propertyValue = Math.round(m.propertyValue * (1 + data.returns.housing / 100));
+      cashFlow += rent - payment;
+      return {
+        ...h,
+        currentValue: propertyValue - loan,
+        mortgage: { propertyValue, loan, yearsLeft: Math.max(0, m.yearsLeft - 1), lastRent: rent, lastPayment: payment },
+      };
+    });
+    const newCash = s.cash + cashFlow;
 
     const journal = s.journal.map((j) => {
       if (j.year !== s.year || j.category !== 'קנייה' || j.outcomeNote) return j;
       const holding = s.holdings.find((h) => h.id === j.holdingId);
       if (!holding) return j;
+      const after = holdings.find((h) => h.id === holding.id);
+      if (holding.mortgage && after?.mortgage) {
+        const m = after.mortgage;
+        return {
+          ...j,
+          outcomeNote: `בסוף ${s.year}: מחירי הדירות ${data.returns.housing >= 0 ? 'עלו' : 'ירדו'} ב-${Math.abs(data.returns.housing)}%. שווי הדירה ${fmt(m.propertyValue)}, יתרת המשכנתא ${fmt(m.loan)}. קיבלתם שכירות ${fmt(m.lastRent ?? 0)} ושילמתם ${fmt(m.lastPayment ?? 0)} למשכנתא (ריבית ${data.mortgageRate}%). ההון העצמי שלכם בדירה: ${fmt(after.currentValue)}.`,
+        };
+      }
       const r = data.returns[holding.assetKey];
       return {
         ...j,
@@ -812,15 +850,18 @@ export const useGameStore = create<GameState>()(
 
     set({
       year: nextYear,
+      cash: newCash,
       interestRate: data.boiRateEnd,
       priceLevel: s.priceLevel * (1 + data.cpi / 100),
       holdings,
       journal,
-      missions: checkMissions(s.missions, holdings, journal, nextYear, s.cash, true),
-      snapshots: [...s.snapshots, { year: s.year, slices: composition(s.cash, holdings) }],
+      missions: checkMissions(s.missions, holdings, journal, nextYear, newCash, true),
+      snapshots: [...s.snapshots, { year: s.year, slices: composition(Math.max(0, newCash), holdings) }],
       currentEvent: event,
       eventHistory: s.currentEvent ? [s.currentEvent, ...s.eventHistory] : s.eventHistory,
-      toastMessage: over ? (s.stage < 3 ? `${stageInfo(s.stage).name} הסתיים! פתחו את התיק לסיכום. המורה יפתח את השלב הבא.` : 'המשחק הסתיים! פתחו את התיק לסיכום של שלושת השלבים.') : `עברנו ל-${nextYear}. ${data.headline}`,
+      toastMessage: over ? (s.stage < 3 ? `${stageInfo(s.stage).name} הסתיים! פתחו את התיק לסיכום. המורה יפתח את השלב הבא.` : 'המשחק הסתיים! פתחו את התיק לסיכום של שלושת השלבים.') : newCash < 0
+        ? `עברנו ל-${nextYear}. שימו לב: החזרי המשכנתא גדולים מהשכירות, והכסף הפנוי ירד מתחת לאפס (${fmt(newCash)}). זה סיכון של מינוף.`
+        : `עברנו ל-${nextYear}. ${data.headline}`,
     });
   },
 

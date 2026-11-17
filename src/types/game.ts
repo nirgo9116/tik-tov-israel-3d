@@ -32,6 +32,8 @@ export interface Holding {
   riskLevel: RiskLevel;
   fictional?: boolean;
   partners?: string[];
+  /** Apartment bought with a down payment and a mortgage. currentValue = propertyValue - loan (equity). */
+  mortgage?: { propertyValue: number; loan: number; yearsLeft: number; lastRent?: number; lastPayment?: number };
 }
 
 export interface JournalEntry {

@@ -861,3 +861,13 @@ body { direction: rtl; }
 .primary-fab { font-size: 16px !important; padding: 12px 20px !important; box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
 .stage-over-box { background: #7f1d1d; border: 1px solid #f87171; border-radius: 10px; padding: 10px 12px; font-size: 13px; margin: 10px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .stage-step[role=button] { cursor: pointer; } .stage-step[role=button]:hover { outline: 2px solid #fff; }
+.mortgage-box { background: #0f172a; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px; margin: 8px 0; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+.mortgage-row { display: flex; flex-direction: column; gap: 4px; }
+.mortgage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mortgage-grid > div { background: #1e293b; border-radius: 8px; padding: 6px 8px; display: flex; flex-direction: column; }
+.mortgage-grid span { color: #94a3b8; font-size: 11px; }
+.mortgage-grid b { font-size: 14px; }
+.mortgage-flow { border-radius: 8px; padding: 6px 8px; font-weight: 700; }
+.mortgage-flow.pos { background: #14532d; }
+.mortgage-flow.neg { background: #7f1d1d; }
+.mortgage-note { color: #cbd5e1; margin: 0; }

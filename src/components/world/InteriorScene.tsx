@@ -17,7 +17,7 @@ const H = 4.6; // ceiling height
 export function pastValues(key: string, currentYear: number): Array<{ year: number; v: number }> {
   return HISTORY.filter((y) => y.year < currentYear).map((y) => ({
     year: y.year,
-    v: key === 'boiRateEnd' ? y.boiRateEnd : key === 'cpi' ? y.cpi : (y.returns as Record<string, number>)[key],
+    v: key === 'boiRateEnd' ? y.boiRateEnd : key === 'cpi' ? y.cpi : key === 'mortgageRate' ? y.mortgageRate : (y.returns as Record<string, number>)[key],
   }));
 }
 

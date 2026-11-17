@@ -5,7 +5,7 @@ import type { AssetKey } from './history';
 export type StationAction =
   | { kind: 'invest' }
   | { kind: 'exit' }
-  | { kind: 'info'; title: string; body: string[]; series?: { key: AssetKey | 'boiRateEnd' | 'cpi'; label: string; fictional?: boolean } };
+  | { kind: 'info'; title: string; body: string[]; series?: { key: AssetKey | 'boiRateEnd' | 'cpi' | 'mortgageRate'; label: string; fictional?: boolean } };
 
 export interface Station {
   id: string;
@@ -143,6 +143,20 @@ export const INTERIORS: Record<CityHubId, InteriorDef> = {
             'דירה היא נכס לא נזיל: קשה למכור אותה מהר, ומכירה לוקחת זמן ועולה כסף.',
             'יש גם הוצאות: תיקונים, תקופות בלי שוכר, מסים ועמלות. קבוצת רכישה מאפשרת לכמה אנשים לקנות יחד, אבל גם מחייבת הסכמות ביניהם.',
           ],
+        },
+      },
+      {
+        id: 'mortgage',
+        label: 'יועצת המשכנתאות',
+        pos: [5.2, -5.2],
+        action: {
+          kind: 'info',
+          title: 'משכנתא: הון עצמי והלוואה',
+          body: [
+            'משכנתא היא הלוואה לקניית דירה. את החלק שאתם משלמים מכספכם קוראים הון עצמי. לדירה להשקעה הבנק מלווה עד 50% מהמחיר (הוראת בנק ישראל 329).',
+            'משכנתא מאפשרת לקנות דירה יקרה יותר, אבל מגדילה גם את הסיכון: אם המחירים יורדים או הריבית עולה, ההפסד גדל. בכל חודש משלמים החזר, ואם השכירות קטנה ממנו משלימים מהכסף הפנוי.',
+          ],
+          series: { key: 'mortgageRate', label: 'ריבית ממוצעת על משכנתא (%)' },
         },
       },
       exit,

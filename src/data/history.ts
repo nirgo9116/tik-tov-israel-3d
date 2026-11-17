@@ -14,6 +14,9 @@
  * - deposit:    Simplified deposit return: approximately the AVERAGE BoI rate during the year.
  *               Real bank deposits usually paid less than this.
  * - cpiLinked:  Simplified CPI-linked deposit: earns exactly the CPI change (0% real interest).
+ * - mortgageRate: Average interest on new non-indexed mortgages, 20–25 year term, in % (Bank of Israel
+ *               data). 2017–2023: yearly averages as listed on primeinv.co.il; 2024: average of the
+ *               12 monthly BoI figures as listed on mashcantaman.co.il. Used as a simplified variable rate.
  *
  * Fictional series (shown in the game with a "בדוי" tag, for teaching only):
  * - fictionalStock: a made-up single tech company, to show concentration risk.
@@ -32,14 +35,28 @@ export type AssetKey =
 export interface YearData {
   year: number;
   boiRateEnd: number;
+  mortgageRate: number;
   cpi: number;
   returns: Record<AssetKey, number>;
   headline: string;
   detail: string;
 }
 
-/** Assumed gross rental yield added to the housing price change for rented apartments. */
+/** Assumed gross rental yield: yearly rent as % of the apartment's value. */
 export const RENT_YIELD = 3;
+/** Bank of Israel directive 329: maximum loan-to-value for an investment apartment. */
+export const MAX_LTV_INVESTMENT = 0.5;
+/** Mortgage term used in the game (years). */
+export const MORTGAGE_YEARS = 25;
+
+const MORTGAGE_RATE: Record<number, number> = { 2017: 4.77, 2018: 4.35, 2019: 4.17, 2020: 3.53, 2021: 3.28, 2022: 4.08, 2023: 5.07, 2024: 5.05 };
+
+/** Yearly payment of a loan with `years` yearly payments left, at `ratePct` % a year. */
+export function annualPayment(loan: number, ratePct: number, years: number): number {
+  if (loan <= 0 || years <= 0) return 0;
+  const r = ratePct / 100;
+  return r === 0 ? loan / years : (loan * r) / (1 - Math.pow(1 + r, -years));
+}
 
 const raw: Array<{
   year: number;
@@ -154,6 +171,7 @@ const raw: Array<{
 export const HISTORY: YearData[] = raw.map((r) => ({
   year: r.year,
   boiRateEnd: r.boiRateEnd,
+  mortgageRate: MORTGAGE_RATE[r.year],
   cpi: r.cpi,
   headline: r.headline,
   detail: r.detail,
@@ -182,4 +200,7 @@ export const SOURCES: Array<{ label: string; url: string }> = [
   { label: 'הבורסה לניירות ערך בתל אביב', url: 'https://www.tase.co.il' },
   { label: 'מדד מחירי הדירות ומדד המחירים לצרכן (הלמ"ס)', url: 'https://www.cbs.gov.il' },
   { label: 'ריבית בנק ישראל', url: 'https://www.boi.org.il' },
+  { label: 'ריבית ממוצעת על משכנתאות לא צמודות, 2017–2023 (לפי נתוני בנק ישראל)', url: 'https://primeinv.co.il/%D7%A8%D7%99%D7%91%D7%99%D7%95%D7%AA-%D7%9E%D7%A9%D7%9B%D7%A0%D7%AA%D7%90/' },
+  { label: 'ריבית ממוצעת על משכנתאות לא צמודות, 2024 (לפי נתוני בנק ישראל)', url: 'https://mashcantaman.co.il/%D7%A8%D7%99%D7%91%D7%99%D7%AA-%D7%9E%D7%A9%D7%9B%D7%A0%D7%AA%D7%90-%D7%9E%D7%9E%D7%95%D7%A6%D7%A2%D7%AA/' },
+  { label: 'הוראת ניהול בנקאי תקין 329: עד 50% מימון לדירה להשקעה', url: 'https://boi.org.il/media/uwaetnrb/447.pdf' },
 ];
