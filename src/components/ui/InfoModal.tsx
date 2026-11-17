@@ -37,7 +37,7 @@ export const InfoModal: React.FC = () => {
                 const msg = finished
                   ? `לפתוח את ${stageInfo((stage + 1) as 1 | 2 | 3).name}?`
                   : `השלב הנוכחי עוד לא הסתיים (שנת ${year}). לפתוח בכל זאת את ${stageInfo((stage + 1) as 1 | 2 | 3).name}? התוצאה של השלב הנוכחי תישמר כמו שהיא.`;
-                if (window.confirm(msg)) startNextStage();
+                if (window.confirm(msg.replace('התוצאה של השלב הנוכחי תישמר כמו שהיא.', 'ההתקדמות בשלב הנוכחי תישמר, ואפשר לחזור אליו.'))) startNextStage();
               }}
             >
               פתיחת השלב הבא: {stageInfo((stage + 1) as 1 | 2 | 3).name}
@@ -45,6 +45,14 @@ export const InfoModal: React.FC = () => {
           ) : (
             <p>זה השלב האחרון. בסוף השלב, התלמידים רואים בתיק טבלה שמשווה בין שלושת העולמות.</p>
           )}
+          <p style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            מעבר ישיר לשלב (ההתקדמות בכל שלב נשמרת):
+            {STAGES.map((st) => (
+              <button key={st.n} className="btn-mini" disabled={st.n === stage} onClick={() => useGameStore.getState().goToStage(st.n)}>
+                {st.n}. {st.name}
+              </button>
+            ))}
+          </p>
           <p className="text-muted" style={{ fontSize: 12 }}>
             ההתקדמות נשמרת בכל מחשב בנפרד, ולכן כל תלמיד לוחץ על הכפתור כשהמורה אומר (כמו בכפתור "לשנה הבאה").
           </p>

@@ -860,3 +860,4 @@ body { direction: rtl; }
 .hint-toggle { align-self: flex-end; pointer-events: auto; }
 .primary-fab { font-size: 16px !important; padding: 12px 20px !important; box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
 .stage-over-box { background: #7f1d1d; border: 1px solid #f87171; border-radius: 10px; padding: 10px 12px; font-size: 13px; margin: 10px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stage-step[role=button] { cursor: pointer; } .stage-step[role=button]:hover { outline: 2px solid #fff; }

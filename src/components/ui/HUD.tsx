@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Backpack, Radio, MapPin, FastForward, TrainFront, Info, Monitor, Box, HelpCircle, Map as MapIcon, Sparkles, Briefcase, Coins } from 'lucide-react';
-import { CITY_HUBS, JOBS, cityStage, hasWebGL, stageInfo, useGameStore } from '../../store/gameStore';
+import { CITY_HUBS, JOBS, STAGES, cityStage, hasWebGL, stageInfo, useGameStore } from '../../store/gameStore';
 import { INTERIORS } from '../../data/interiors';
 import { runStation } from './stations';
 import { composition } from '../../data/composition';
@@ -60,6 +60,7 @@ export const HUD: React.FC = () => {
   const stage = useGameStore((s) => s.stage);
   const startCash = useGameStore((s) => s.startCash);
   const setStageIntroOpen = useGameStore((s) => s.setStageIntroOpen);
+  const goToStage = useGameStore((s) => s.goToStage);
   const st = stageInfo(stage);
   const roundNo = Math.min(year, LAST_YEAR) - FIRST_YEAR + 1;
   const rounds = LAST_YEAR - FIRST_YEAR + 1;
@@ -84,8 +85,18 @@ export const HUD: React.FC = () => {
           <div>
             <button className="brand-title stage-inline" onClick={() => setStageIntroOpen(true)} title="מה עושים בשלב הזה?">
               <span className="stage-steps">
-                {[1, 2, 3].map((n) => (
-                  <span key={n} className={`stage-step${n === stage ? ' on' : n < stage ? ' done' : ''}`} style={n === stage ? { backgroundColor: st.color } : undefined}>
+                {([1, 2, 3] as const).map((n) => (
+                  <span
+                    key={n}
+                    role="button"
+                    title={`מעבר לשלב ${n}: ${STAGES[n - 1].name}`}
+                    className={`stage-step${n === stage ? ' on' : ''}`}
+                    style={n === stage ? { backgroundColor: st.color } : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (n !== stage) goToStage(n);
+                    }}
+                  >
                     {n}
                   </span>
                 ))}

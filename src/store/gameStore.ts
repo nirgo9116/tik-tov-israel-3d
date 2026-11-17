@@ -439,6 +439,9 @@ interface GameState {
   setStageIntroOpen: (open: boolean) => void;
   /** Teacher only: save this stage's result and open the next world. */
   startNextStage: () => void;
+  /** Move to any stage; each stage keeps its own progress. */
+  goToStage: (n: StageNum) => void;
+  stageSaves: Partial<Record<StageNum, Record<string, unknown>>>;
   cash: number;
   /** The year in which students are currently deciding. LAST_YEAR + 1 means the game is over. */
   year: number;
@@ -526,6 +529,9 @@ interface GameState {
   getRubric: () => RubricBreakdown;
 }
 
+/** Game fields that belong to one stage and are kept when moving between stages. */
+const STAGE_SAVE_KEYS = ['startCash', 'cash', 'year', 'interestRate', 'priceLevel', 'holdings', 'journal', 'missions', 'currentEvent', 'eventHistory', 'activeYears', 'snapshots', 'jobYear'] as const;
+
 const initialGame = (stage: StageNum = 1) => ({
   stage,
   startCash: stageInfo(stage).budget,
@@ -568,6 +574,7 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
   ...initialGame(1),
   stageResults: [] as GameState['stageResults'],
+  stageSaves: {} as GameState['stageSaves'],
   stageIntroOpen: false,
   liteMode: readLitePref(),
   highGraphics: readFlag('tiktov-hq'),
@@ -878,16 +885,28 @@ export const useGameStore = create<GameState>()(
   startNextStage: () => {
     const s = get();
     if (s.stage >= 3) return;
+    s.goToStage((s.stage + 1) as StageNum);
+  },
+  goToStage: (n) => {
+    const s = get();
+    if (n === s.stage) return;
+    // Keep the current stage's progress and its result (for the comparison table)
+    const saved: Record<string, unknown> = {};
+    for (const k of STAGE_SAVE_KEYS) saved[k] = (s as unknown as Record<string, unknown>)[k];
     const netWorth = s.getNetWorth();
     const result = { stage: s.stage, startCash: s.startCash, netWorth, realValue: Math.round(netWorth / s.priceLevel), score: s.getRubric().total, slices: composition(s.cash, s.holdings) };
-    const next = (s.stage + 1) as StageNum;
+    const restore = s.stageSaves[n];
     set({
-      ...initialGame(next),
-      stageResults: [...s.stageResults.filter((r) => r.stage !== s.stage), result],
-      stageIntroOpen: true,
+      ...initialGame(n),
+      ...(restore ?? {}),
+      stage: n,
+      stageSaves: { ...s.stageSaves, [s.stage]: saved },
+      stageResults: [...s.stageResults.filter((r) => r.stage !== s.stage && r.stage !== n), result],
+      stageIntroOpen: !restore,
       infoOpen: false,
       tikOpen: false,
       openHub: null,
+      toastMessage: restore ? `חזרתם ל${stageInfo(n).name}. ההתקדמות שלכם נשמרה.` : null,
     });
   },
 
@@ -975,6 +994,7 @@ export const useGameStore = create<GameState>()(
         stage: s.stage,
         startCash: s.startCash,
         stageResults: s.stageResults,
+        stageSaves: s.stageSaves,
         snapshots: s.snapshots,
       }),
     }
