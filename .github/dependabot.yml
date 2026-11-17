@@ -10,6 +10,11 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # The 3D stack must move together (tested by hand): three 0.187 + postprocessing 2.19 blanks the game.
+      - dependency-name: "three"
+      - dependency-name: "@types/three"
+      - dependency-name: "@react-three/*"
+      - dependency-name: "postprocessing"
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
