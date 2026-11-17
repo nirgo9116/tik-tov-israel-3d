@@ -14,6 +14,8 @@ import { Orchard } from './components/world/Orchard';
 import { WalkMarker, WalkPlane } from './components/world/WalkTarget';
 import { StationInfoModal } from './components/ui/StationInfoModal';
 import { StageIntroModal } from './components/ui/StageIntroModal';
+import { ShareModal } from './components/ui/ShareModal';
+import { ClassBoard } from './components/ui/ClassBoard';
 import { runStation } from './components/ui/stations';
 import { PaycheckModal } from './components/ui/PaycheckModal';
 import { HUD } from './components/ui/HUD';
@@ -30,13 +32,16 @@ export const App: React.FC = () => {
   const highGraphics = useGameStore((s) => s.highGraphics);
   const interior = useGameStore((s) => s.interior);
   const stage = useGameStore((s) => s.stage);
+  const presentMode = useGameStore((s) => s.presentMode);
+  const classBoardOpen = useGameStore((s) => s.classBoardOpen);
+  const setClassBoardOpen = useGameStore((s) => s.setClassBoardOpen);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const s = useGameStore.getState();
-      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo || s.stageIntroOpen;
+      const anyOpen = s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.trainRide || s.stationInfo || s.stageIntroOpen || s.shareOpen || s.classBoardOpen;
       if (s.tutorialOpen || s.paycheck || s.trainRide) return;
 
       if (e.code === 'KeyI' && !anyOpen) {
@@ -53,6 +58,8 @@ export const App: React.FC = () => {
         if (s.infoOpen) s.setInfoOpen(false);
         if (s.jobsOpen) s.setJobsOpen(false);
         if (s.stationInfo) s.setStationInfo(null);
+        if (s.shareOpen) s.setShareOpen(false);
+        if (s.classBoardOpen) s.setClassBoardOpen(false);
         if (!anyOpen && s.interior) s.exitBuilding();
       } else if (s.interior) {
         // Inside a building: E / Enter / Space uses the station you stand on
@@ -83,7 +90,7 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="game-root">
+    <div className={`game-root${presentMode ? ' present' : ''}`}>
       {liteMode ? (
         <LiteMap />
       ) : (
@@ -140,6 +147,8 @@ export const App: React.FC = () => {
       <TrainRideBanner />
       <StationInfoModal />
       <StageIntroModal />
+      <ShareModal />
+      {classBoardOpen && <ClassBoard onClose={() => setClassBoardOpen(false)} />}
     </div>
   );
 };

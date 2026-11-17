@@ -535,6 +535,12 @@ interface GameState {
   tikOpen: boolean;
   trainOpen: boolean;
   infoOpen: boolean;
+  shareOpen: boolean;
+  classBoardOpen: boolean;
+  presentMode: boolean;
+  setShareOpen: (open: boolean) => void;
+  setClassBoardOpen: (open: boolean) => void;
+  setPresentMode: (on: boolean) => void;
   tutorialOpen: boolean;
   /** Bird's-eye view of the whole map. */
   overview: boolean;
@@ -697,6 +703,15 @@ export const useGameStore = create<GameState>()(
   setTikTab: (tab) => set({ tikTab: tab }),
   setTrainOpen: (open) => set({ trainOpen: open, openHub: null, tikOpen: false }),
   setInfoOpen: (open) => set({ infoOpen: open }),
+  shareOpen: false,
+  classBoardOpen: false,
+  presentMode: readFlag('tiktov-present'),
+  setShareOpen: (open) => set({ shareOpen: open, tikOpen: open ? false : get().tikOpen }),
+  setClassBoardOpen: (open) => set({ classBoardOpen: open, infoOpen: false }),
+  setPresentMode: (on) => {
+    writeFlag('tiktov-present', on);
+    set({ presentMode: on });
+  },
   setOverview: (on) => set({ overview: on }),
   setTutorialOpen: (open) => {
     if (!open) writeTutorialSeen();

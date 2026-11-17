@@ -112,7 +112,7 @@ export const PlayerWithTik: React.FC = () => {
   const playerRot = useGameStore((s) => s.playerRot);
   const holdings = useGameStore((s) => s.holdings);
   const overview = useGameStore((s) => s.overview);
-  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.stationInfo || s.stageIntroOpen));
+  const paused = useGameStore((s) => Boolean(s.openHub || s.tikOpen || s.trainOpen || s.infoOpen || s.tutorialOpen || s.paycheck || s.jobsOpen || s.stationInfo || s.stageIntroOpen || s.shareOpen || s.classBoardOpen));
   const interior = useGameStore((s) => s.interior);
   const setNearbyStation = useGameStore((s) => s.setNearbyStation);
   const getRubric = useGameStore((s) => s.getRubric);

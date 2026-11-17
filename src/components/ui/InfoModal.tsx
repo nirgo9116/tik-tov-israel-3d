@@ -9,6 +9,7 @@ export const InfoModal: React.FC = () => {
   const stage = useGameStore((s) => s.stage);
   const year = useGameStore((s) => s.year);
   const startNextStage = useGameStore((s) => s.startNextStage);
+  const presentMode = useGameStore((s) => s.presentMode);
   const isGameOver = useGameStore((s) => s.isGameOver);
   if (!open) return null;
   const finished = isGameOver();
@@ -22,6 +23,22 @@ export const InfoModal: React.FC = () => {
           <button className="icon-close" onClick={() => setInfoOpen(false)} aria-label="סגירה">
             <X size={20} />
           </button>
+        </div>
+
+        <div className="teacher-stage teacher-class">
+          <h4 style={{ marginTop: 0 }}>הקרנה בכיתה</h4>
+          <p>התלמידים יוצרים קוד תוצאות בתיק ("שליחת התוצאות למורה") ושולחים לכם. בלוח הכיתה מדביקים את הקודים ומציגים על המסך. השמות מוסתרים כברירת מחדל, והלוח לא נשמר.</p>
+          <p style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn-invest" onClick={() => useGameStore.getState().setClassBoardOpen(true)}>
+              פתיחת לוח הכיתה
+            </button>
+            <button className={`btn-mini ${presentMode ? 'btn-on' : ''}`} onClick={() => useGameStore.getState().setPresentMode(!presentMode)}>
+              מצב הקרנה (טקסט גדול): {presentMode ? 'פועל' : 'כבוי'}
+            </button>
+          </p>
+          <p className="text-muted" style={{ fontSize: 12 }}>
+            לפני שמציגים תוצאות של תלמיד מול הכיתה, כדאי לבקש את הסכמתו. מומלץ להציג החלטות ונימוקים, לא רווחים.
+          </p>
         </div>
 
         <div className="teacher-stage">
