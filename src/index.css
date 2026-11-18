@@ -919,3 +919,5 @@ body { direction: rtl; }
 .student-code-row label { white-space: nowrap; font-weight: 700; }
 .student-code-row .share-input { max-width: 160px; }
 .share-actions .share-btn { width: auto; flex: 1; margin-bottom: 0; }
+
+.copyright-note { margin: 10px 0 0; font-size: 11px; color: #94a3b8; text-align: center; }

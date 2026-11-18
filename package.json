@@ -1,5 +1,7 @@
 {
   "name": "tik-tov-israel-3d",
+  "author": "Nir Goldstein and Rinat Ashkenazi-Gal",
+  "license": "UNLICENSED",
   "private": true,
   "version": "2.0.0",
   "type": "module",

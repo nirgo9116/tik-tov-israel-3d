@@ -1,3 +1,4 @@
+import { COPYRIGHT } from '../../data/copyright';
 import React from 'react';
 import { X, Info } from 'lucide-react';
 import { STAGES, stageInfo, useGameStore } from '../../store/gameStore';
@@ -162,6 +163,7 @@ export const InfoModal: React.FC = () => {
             </li>
           ))}
         </ul>
+        <p className="copyright-note">{COPYRIGHT}</p>
       </div>
     </div>
   );

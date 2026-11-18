@@ -1,3 +1,4 @@
+import { COPYRIGHT } from '../../data/copyright';
 import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { STAGES, useGameStore } from '../../store/gameStore';
@@ -142,6 +143,7 @@ export const TutorialModal: React.FC = () => {
             </button>
           )}
         </div>
+        <p className="copyright-note">{COPYRIGHT}</p>
       </div>
     </div>
   );

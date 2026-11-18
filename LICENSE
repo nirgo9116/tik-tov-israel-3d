@@ -1,0 +1,18 @@
+Copyright (c) 2026 Nir Goldstein and Rinat Ashkenazi-Gal. All rights reserved.
+© 2026 ניר גולדשטיין ורינת אשכנזי-גל. כל הזכויות שמורות.
+
+"Tik Tov" (תיק טוב) — the software, source code, graphics, texts, game design and
+educational materials in this repository — is proprietary.
+
+No license is granted to copy, modify, distribute, sublicense, publish, sell,
+or create derivative works from any part of this repository, in whole or in part,
+without prior written permission from the copyright holders.
+
+Viewing the public game website for personal or classroom evaluation does not grant
+any rights in the software or its content.
+
+The historical market data in src/data/history.ts is drawn from public sources
+listed there; those sources keep their own terms. This notice covers the selection,
+arrangement and presentation in this project.
+
+Permissions: nirgo9116@gmail.com
